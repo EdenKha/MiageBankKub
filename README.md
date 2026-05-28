@@ -19,7 +19,6 @@ Dans le cadre de l'industrialisation des images de conteneurs, Buildah propose u
 * **Buildah**, grâce à sa nature daemonless et rootless, s'intègre naturellement et de façon sécurisée dans ces pipelines. Il peut être lancé directement à l'intérieur d'un pod Kubernetes ou d'un runner CI sans nécessiter de privilèges élevés ni de montages de sockets à risques.
 
 ### 5. Rapports de Sécurité et Audit (Trivy & Dive)
-### 5. Rapports de Sécurité et Audit (Trivy & Dive)
 
 **Analyse Trivy (CVE HIGH/CRITICAL)** : 
 Le scan Trivy remonte plusieurs vulnérabilités (notamment sur le framework Spring, Tomcat et SnakeYaml), dues à la version obsolète des dépendances utilisées par le projet Java de base. Voici les principales :
