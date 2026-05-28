@@ -18,6 +18,16 @@ Dans le cadre de l'industrialisation des images de conteneurs, Buildah propose u
 ### 4. Cas d'usage CI/CD : Pertinence en environnement Rootless
 * **Buildah**, grâce à sa nature daemonless et rootless, s'intègre naturellement et de façon sécurisée dans ces pipelines. Il peut être lancé directement à l'intérieur d'un pod Kubernetes ou d'un runner CI sans nécessiter de privilèges élevés ni de montages de sockets à risques.
 
+### 5. Rapports de Sécurité et Audit (Trivy & Dive)
+> ⚠️ **À COMPLÉTER PAR L'ÉTUDIANT** ⚠️ 
+> (Le TP exige que vous expliquiez les vulnérabilités trouvées et les optimisations Dive)
+> 
+> **Analyse Trivy (CVE HIGH/CRITICAL)** : 
+> *(Téléchargez le rapport généré par GitHub Actions, listez ici les CVE trouvées et proposez un plan de remédiation : ex. mise à jour de l'image de base Alpine, etc.)*
+> 
+> **Audit Dive (Optimisation des layers)** : 
+> *(Insérez ici une capture d'écran de Dive ou expliquez ce qui a été optimisé. Le multi-stage build dans notre Containerfile a permis de ne pas inclure le JDK complet et les sources, réduisant drastiquement l'espace gaspillé).*
+
 ---
 
 ## Partie B - Déploiement Kubernetes & GitOps avec ArgoCD
@@ -36,8 +46,11 @@ kubectl apply -f db-secret.yaml
 ### 3. GitOps ArgoCD - Démonstration de la Dérive
 Le manifeste `argocd-app.yaml` définit le déploiement continu du Chart Helm sur le namespace `miage-bank`.
 
+**Le paradoxe de l'œuf ou la poule (GitOps)** : 
+Pour déployer des applications via ArgoCD, ArgoCD doit lui-même être déployé sur le cluster ! Il est donc impossible de déployer ArgoCD "depuis zéro" de façon purement GitOps sans une première action manuelle (ou via un script d'amorçage comme Terraform/Bash). C'est pourquoi l'installation initiale d'ArgoCD se fait manuellement (`kubectl apply -f install.yaml`), et ensuite ArgoCD prend le relais.
+
 **Démonstration du test de dérive (Drift) :**
 1. Une fois l'application synchronisée via ArgoCD (statut *Healthy/Synced*), augmentez artificiellement le nombre de réplicas via la commande imperative :
    `kubectl scale deployment miage-bank --replicas=5 -n miage-bank`
 2. Dans l'interface ArgoCD, l'application basculera presque immédiatement en statut **OutOfSync** (dérive détectée).
-3. Étant donné que nous avons configuré `selfHeal: true` dans la `syncPolicy` de l'application, ArgoCD déclenche une réconciliation automatique. Il annule notre modification manuelle et restaure le nombre de pods défini dans Git. Le statut repasse en **Synced**.
+3. Étant donné que nous avons configuré `selfHeal: true` dans la `syncPolicy` de l'application, ArgoCD déclenche une réconciliation automatique. Il annule notre modification manuelle (suppression des 4 pods superflus) et restaure le nombre de pods défini dans Git. Le statut repasse en **Synced**.
