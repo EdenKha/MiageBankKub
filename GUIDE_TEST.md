@@ -54,7 +54,7 @@ minikube addons enable ingress
    ```bash
    kubectl get pods -n miage-bank -w
    ```
-   *(Vous devriez voir le pod se créer. S'il entre en `CrashLoopBackOff`, c'est normal si la base de données MySQL n'est pas déployée en face, mais le déploiement Helm aura prouvé qu'il fonctionne !)*
+   *(Vous devriez voir **DEUX** pods se créer : l'application Java et la base de données MySQL. L'application va s'y connecter et les deux pods afficheront le statut `Running 1/1` sans aucune erreur de type CrashLoopBackOff !)*
 
 ### Étape 2.3 : Tester le GitOps avec ArgoCD
 

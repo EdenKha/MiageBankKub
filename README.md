@@ -1,5 +1,8 @@
 # Hugues Ansoborlo - TP KUB DevOps MIAGE-Bank
 
+> ⚠️ **Note Importante sur cette branche (`test-appli-running`)** ⚠️
+> Cette branche a été spécialement créée pour faire **tourner l'application localement de manière autonome**. Contrairement à la branche `main` (qui respecte strictement les consignes du TP en attendant un cluster d'entreprise), cette branche embarque sa propre base de données MySQL et contourne l'absence du serveur de configuration afin d'afficher un statut `Running 1/1` parfait pour les tests de démonstration.
+
 ## Partie A - Analyse comparative Docker vs Buildah
 
 Dans le cadre de l'industrialisation des images de conteneurs, Buildah propose une alternative intéressante au moteur historique Docker. Voici une comparaison sur plusieurs axes techniques :
