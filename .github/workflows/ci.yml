@@ -12,6 +12,9 @@ env:
 jobs:
   build-and-audit:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
     - name: Checkout repository
@@ -44,6 +47,15 @@ jobs:
 
     - name: Push image to Docker Daemon for Trivy and Dive
       run: buildah push miage-bank:latest docker-daemon:miage-bank:latest
+
+    - name: Push to GitHub Container Registry
+      uses: redhat-actions/push-to-registry@v2
+      with:
+        image: miage-bank
+        tags: latest
+        registry: ghcr.io/${{ github.repository_owner }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master

@@ -3,8 +3,8 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/votre-user/miage-bank
-  pullPolicy: IfNotPresent
+  repository: ghcr.io/EdenKha/miage-bank
+  pullPolicy: Always
   tag: "latest"
 
 imagePullSecrets: []
