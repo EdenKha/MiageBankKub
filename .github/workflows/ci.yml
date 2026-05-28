@@ -39,6 +39,9 @@ jobs:
         containerfiles: BanqueMSSol/Banque-ClientService/Containerfile
         context: BanqueMSSol/Banque-ClientService
 
+    - name: Push image to Docker Daemon for Trivy and Dive
+      run: buildah push miage-bank:latest docker-daemon:miage-bank:latest
+
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
