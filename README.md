@@ -19,14 +19,19 @@ Dans le cadre de l'industrialisation des images de conteneurs, Buildah propose u
 * **Buildah**, grâce à sa nature daemonless et rootless, s'intègre naturellement et de façon sécurisée dans ces pipelines. Il peut être lancé directement à l'intérieur d'un pod Kubernetes ou d'un runner CI sans nécessiter de privilèges élevés ni de montages de sockets à risques.
 
 ### 5. Rapports de Sécurité et Audit (Trivy & Dive)
-> ⚠️ **À COMPLÉTER PAR L'ÉTUDIANT** ⚠️ 
-> (Le TP exige que vous expliquiez les vulnérabilités trouvées et les optimisations Dive)
-> 
-> **Analyse Trivy (CVE HIGH/CRITICAL)** : 
-> *(Téléchargez le rapport généré par GitHub Actions, listez ici les CVE trouvées et proposez un plan de remédiation : ex. mise à jour de l'image de base Alpine, etc.)*
-> 
-> **Audit Dive (Optimisation des layers)** : 
-> *(Insérez ici une capture d'écran de Dive ou expliquez ce qui a été optimisé. Le multi-stage build dans notre Containerfile a permis de ne pas inclure le JDK complet et les sources, réduisant drastiquement l'espace gaspillé).*
+### 5. Rapports de Sécurité et Audit (Trivy & Dive)
+
+**Analyse Trivy (CVE HIGH/CRITICAL)** : 
+Le scan Trivy remonte plusieurs vulnérabilités (notamment sur le framework Spring, Tomcat et SnakeYaml), dues à la version obsolète des dépendances utilisées par le projet Java de base. Voici les principales :
+* **CVE-2022-22965 (Spring4Shell) & CVE-2022-22968** : Vulnérabilité critique de RCE (Remote Code Execution) dans le mécanisme de Data Binding de Spring Framework.
+* **CVE-2022-1471 (SnakeYaml)** : Vulnérabilité de désérialisation non sécurisée permettant une exécution de code arbitraire.
+* **Vulnérabilités Tomcat (ex: CVE-2023-44487)** : Vulnérabilité au DDoS via le protocole HTTP/2 (Rapid Reset Attack).
+* **Plan de remédiation** : La solution pour corriger l'ensemble de ces failles applicatives est de mettre à jour le composant `spring-boot-starter-parent` dans le `pom.xml` vers une version récente (ex: 3.2.x ou supérieure) qui embarque les versions patchées de Tomcat, Spring et SnakeYaml, puis de relancer le build Buildah.
+
+**Audit Dive (Optimisation des layers)** : 
+* L'image générée obtient un score d'efficacité de **99.82%** (`efficiencyScore: 0.9982`).
+* La taille totale de l'image est de **236 Mo** (`sizeBytes: 236045966`), avec un espace gaspillé négligeable (proche de 0 octet).
+* **Explication des optimisations** : L'utilisation d'un **Multi-stage build** dans le Containerfile (un stage pour compiler avec Maven et le JDK complet, et un stage final qui ne contient que le JRE minimaliste `eclipse-temurin:11-jre-alpine` et le fichier `.jar`) a permis de ne conserver strictement que le nécessaire à l'exécution en production. Aucune dépendance de build, ni code source, n'ont fuité dans les layers de l'image finale, ce qui explique cet excellent score Dive.
 
 ---
 
