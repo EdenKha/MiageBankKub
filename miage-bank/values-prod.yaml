@@ -74,3 +74,12 @@ db:
   name: "banquebd"
   # Le nom du secret K8s créé séparément (externe au chart)
   secretName: "miage-bank-db-secret"
+
+# Configuration Hashicorp Vault (pour External Secrets Operator)
+vault:
+  server: "http://vault.default.svc.cluster.local:8200"
+  kvPath: "secret"
+  version: "v2"
+  secretPath: "miage-bank/db"
+  # Nom du secret Kubernetes qui contient le token d'accès à Vault
+  tokenSecretName: "vault-token"

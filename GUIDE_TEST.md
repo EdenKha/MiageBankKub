@@ -44,10 +44,8 @@ minikube addons enable ingress
    ```powershell
    kubectl create namespace miage-bank
    ```
-2. **Appliquer le secret de base de données** :
-   ```powershell
-   kubectl apply -f db-secret.yaml
-   ```
+2. **Pré-requis Vault / ESO** :
+   Assurez-vous d'avoir déployé Vault et External Secrets Operator sur votre cluster, et d'avoir injecté les secrets dans `secret/data/miage-bank/db`.
 3. **Installer l'application via Helm** :
    ```powershell
    helm install miage-bank-release ./miage-bank -n miage-bank
@@ -85,6 +83,5 @@ Si le professeur a demandé d'installer ArgoCD sur votre cluster local, voici co
 Une fois les tests validés, vous pouvez tout désinstaller proprement pour laisser votre cluster propre :
 ```powershell
 helm uninstall miage-bank-release -n miage-bank
-kubectl delete -f db-secret.yaml
 kubectl delete namespace miage-bank
 ```
