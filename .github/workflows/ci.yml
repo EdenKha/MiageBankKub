@@ -49,14 +49,8 @@ jobs:
         format: 'sarif'
         output: 'trivy-results.sarif'
         severity: 'CRITICAL,HIGH'
-        # On ne bloque pas forcément le build si on veut générer les rapports (ou alors on met exit-code: 1)
+        # On ne bloque pas forcément le build
         # exit-code: 1
-
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
 
     - name: Run Dive audit
       uses: yuichielectric/dive-action@0.0.4
