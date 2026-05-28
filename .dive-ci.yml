@@ -1,0 +1,7 @@
+rules:
+  # Efficacité minimale de l'image (en pourcentage)
+  lowestEfficiency: 0.95
+  # Espace maximal gaspillé (en bytes) - 20 Mo
+  highestWastedBytes: 20971520
+  # Pourcentage maximal d'espace gaspillé
+  highestUserWastedPercent: 0.10

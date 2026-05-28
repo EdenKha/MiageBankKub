@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: miage-bank
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/votre-user/votre-repo.git' # A remplacer par l'URL de votre repo
+    targetRevision: main
+    path: miage-bank # Chemin vers le chart Helm dans le dépôt
+    helm:
+      valueFiles:
+        - values.yaml
+        # - values-prod.yaml (si on déploie en prod)
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: miage-bank
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

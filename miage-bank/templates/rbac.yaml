@@ -1,0 +1,29 @@
+{{- if .Values.serviceAccount.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "miage-bank.fullname" . }}-role
+  labels:
+    {{- include "miage-bank.labels" . | nindent 4 }}
+rules:
+# Least privilege : Accès uniquement aux ressources nécessaires si l'app a besoin d'interroger l'API K8s.
+# MIAGE-Bank (Spring Boot) n'a généralement besoin de rien, mais on peut donner l'accès en lecture aux pods/services du même namespace par précaution.
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "miage-bank.fullname" . }}-rolebinding
+  labels:
+    {{- include "miage-bank.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "miage-bank.fullname" . }}-role
+subjects:
+- kind: ServiceAccount
+  name: {{ include "miage-bank.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -1,0 +1,76 @@
+name: CI Pipeline MIAGE-Bank
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # On utilise un JDK pour générer le JAR du service (pré-requis pour construire l'image)
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Build with Maven (Banque-ClientService)
+      run: mvn -B package --file BanqueMSSol/pom.xml -pl Banque-ClientService -am
+      
+    - name: Run Hadolint
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: BanqueMSSol/Banque-ClientService/Containerfile
+
+    - name: Build image with Buildah
+      id: build-image
+      uses: redhat-actions/buildah-build@v2
+      with:
+        image: miage-bank
+        tags: latest
+        containerfiles: BanqueMSSol/Banque-ClientService/Containerfile
+        context: BanqueMSSol/Banque-ClientService
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'miage-bank:latest'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+        # On ne bloque pas forcément le build si on veut générer les rapports (ou alors on met exit-code: 1)
+        # exit-code: 1
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Run Dive audit
+      uses: yuichielectric/dive-action@0.0.4
+      with:
+        image: 'miage-bank:latest'
+        config-file: ${{ github.workspace }}/.dive-ci.yml
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Export Build Reports
+      if: always()
+      run: |
+        mkdir -p build-reports
+        cp trivy-results.sarif build-reports/ || true
+      
+    - name: Upload Build Reports Artifact
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-reports
+        path: build-reports/

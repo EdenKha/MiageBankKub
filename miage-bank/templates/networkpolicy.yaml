@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "miage-bank.fullname" . }}-default-deny
+  labels:
+    {{- include "miage-bank.labels" . | nindent 4 }}
+spec:
+  podSelector: {} # Applique à tous les pods du namespace où ce chart est déployé
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              # Assumant que Traefik ou l'ingress controller est dans un namespace avec ce label
+              name: ingress-controller
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+    # Autoriser la communication intra-namespace
+    - from:
+        - podSelector: {}
