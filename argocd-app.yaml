@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/votre-user/votre-repo.git' # A remplacer par l'URL de votre repo
+    repoURL: "https://github.com/EdenKha/MiageBankKub.git" # A remplacer par l'URL de votre repo
     targetRevision: main
     path: miage-bank # Chemin vers le chart Helm dans le dépôt
     helm:
@@ -14,7 +14,7 @@ spec:
         - values.yaml
         # - values-prod.yaml (si on déploie en prod)
   destination:
-    server: 'https://kubernetes.default.svc'
+    server: "https://kubernetes.default.svc"
     namespace: miage-bank
   syncPolicy:
     automated:
