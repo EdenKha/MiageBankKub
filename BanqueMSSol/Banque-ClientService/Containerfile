@@ -1,5 +1,6 @@
 # Multi-stage build pour optimiser la taille et la sécurité
 FROM eclipse-temurin:11-jre-alpine AS builder
+WORKDIR /app
 ARG JAR_FILE=target/*.jar
 COPY ${JAR_FILE} application.jar
 RUN java -Djarmode=layertools -jar application.jar extract
