@@ -12,11 +12,11 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     # On utilise un JDK pour générer le JAR du service (pré-requis pour construire l'image)
     - name: Set up JDK 11
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '11'
         distribution: 'temurin'
@@ -67,7 +67,7 @@ jobs:
       
     - name: Upload Build Reports Artifact
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: build-reports
         path: build-reports/
