@@ -1,19 +1,18 @@
 # Guide de Test Local - MIAGE-Bank KUB
 
-Ce guide vous permet de vérifier pas à pas que tout ce que nous avons mis en place fonctionne correctement avant de soumettre votre Pull Request à votre professeur.
+Ce guide vous permet de vérifier pas à pas que l'architecture que j'ai mise en place fonctionne correctement sur votre poste.
 
 ---
 
 ## 1. Tester la Partie A (La pipeline CI/CD)
 
-Puisque vous êtes sous Windows, exécuter nativement Buildah, Trivy et Dive est complexe (nécessite WSL2 configuré spécifiquement). La façon la plus simple et la plus fiable de tester la Partie A est d'utiliser GitHub.
+La pipeline de build (Buildah, Trivy, Dive) s'exécute automatiquement via GitHub Actions à chaque commit. 
 
-1. Créez un dépôt sur votre compte GitHub (ou forkez le dépôt du professeur si demandé).
-2. Poussez l'intégralité du dossier actuel sur la branche `main`.
-3. Allez dans l'onglet **Actions** de votre dépôt sur GitHub.
-4. Vous devriez voir le workflow **"CI Pipeline MIAGE-Bank"** se lancer automatiquement.
-5. Cliquez dessus pour vérifier que les étapes de build Maven, Hadolint, Buildah, Trivy et Dive passent au vert.
-   - *Note : Les rapports Trivy et Dive seront téléchargeables dans la section "Artifacts" en bas du résumé du build sur GitHub.*
+1. Rendez-vous sur mon dépôt GitHub : [https://github.com/EdenKha/MiageBankKub](https://github.com/EdenKha/MiageBankKub)
+2. Allez dans l'onglet **Actions**.
+3. Cliquez sur le dernier run du workflow **"CI Pipeline MIAGE-Bank"**.
+4. Vous pourrez vérifier que les étapes de build Maven, Hadolint, Buildah, Trivy et Dive sont toutes au vert.
+   - *Note : Les rapports complets Trivy et Dive sont disponibles dans le dossier `build-reports/` du code source.*
 
 ---
 
@@ -22,10 +21,11 @@ Puisque vous êtes sous Windows, exécuter nativement Buildah, Trivy et Dive est
 ### Pré-requis
 - Docker Desktop (avec l'option Kubernetes activée) OU **Minikube**.
 - Les outils en ligne de commande : `kubectl` et `helm`.
+- Avoir cloné ce dépôt en local sur votre machine.
 
 ### Étape 2.1 : Validation du Chart Helm
-Avant de déployer, assurez-vous que la syntaxe du Chart est parfaite :
-```powershell
+Placez-vous à la racine du projet et vérifiez la syntaxe du Chart :
+```bash
 # Vérifier le formattage
 helm lint ./miage-bank
 
@@ -35,53 +35,55 @@ helm template ./miage-bank
 
 ### Étape 2.2 : Lancement du cluster et déploiement manuel
 Si vous utilisez Minikube, lancez-le en activant l'Ingress :
-```powershell
+```bash
 minikube start
 minikube addons enable ingress
 ```
 
 1. **Créer le namespace** :
-   ```powershell
+   ```bash
    kubectl create namespace miage-bank
    ```
 2. **Pré-requis Vault / ESO** :
-   Assurez-vous d'avoir déployé Vault et External Secrets Operator sur votre cluster, et d'avoir injecté les secrets dans `secret/data/miage-bank/db`.
+   Le projet utilise *External Secrets Operator* couplé à *Hashicorp Vault*. Assurez-vous d'avoir déployé Vault et ESO sur votre cluster, et d'avoir injecté des identifiants factices dans le chemin `secret/data/miage-bank/db` de Vault.
 3. **Installer l'application via Helm** :
-   ```powershell
+   ```bash
    helm install miage-bank-release ./miage-bank -n miage-bank
    ```
 4. **Vérifier que les pods démarrent** :
-   ```powershell
+   ```bash
    kubectl get pods -n miage-bank -w
    ```
-   *(Vous devriez voir le pod se créer. S'il y a un CrashLoopBackOff, c'est normal si la base de données MySQL n'est pas déployée en face, mais le Helm aura prouvé qu'il fonctionne !)*
+   *(Vous devriez voir le pod se créer. S'il entre en `CrashLoopBackOff`, c'est normal si la base de données MySQL n'est pas déployée en face, mais le déploiement Helm aura prouvé qu'il fonctionne !)*
 
-### Étape 2.3 : Tester le GitOps avec ArgoCD (Si ArgoCD est installé)
+### Étape 2.3 : Tester le GitOps avec ArgoCD
 
-Si le professeur a demandé d'installer ArgoCD sur votre cluster local, voici comment tester la synchronisation :
+Voici comment tester la synchronisation automatique GitOps :
 
-1. **Installer ArgoCD sur votre Minikube** (si ce n'est pas déjà fait en cours) :
-   ```powershell
+1. **Installer ArgoCD sur votre Minikube** (si ce n'est pas déjà fait) :
+   ```bash
    kubectl create namespace argocd
    kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
    ```
-2. **⚠️ IMPORTANT : Modifier le fichier argocd-app.yaml**
-   - Ouvrez `argocd-app.yaml`.
-   - Modifiez la ligne `repoURL: 'https://github.com/votre-user/votre-repo.git'` avec l'URL de votre dépôt GitHub où vous avez poussé le code.
-3. **Appliquer l'application ArgoCD** :
-   ```powershell
+2. **Appliquer l'application ArgoCD** :
+   Le fichier `argocd-app.yaml` est déjà préconfiguré pour pointer sur mon dépôt GitHub.
+   ```bash
    kubectl apply -f argocd-app.yaml
    ```
+3. **Accéder à l'interface ArgoCD** :
+   - Récupérez le mot de passe admin : `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d`
+   - Faites un port-forward : `kubectl port-forward svc/argocd-server -n argocd 8080:443`
+   - Connectez-vous sur `https://localhost:8080` (login: admin)
 4. **Faire le test de Dérive (Drift)** :
    - Regardez les pods : `kubectl get pods -n miage-bank`. Il doit y en avoir 1.
-   - Forcez la modification : `kubectl scale deployment miage-bank --replicas=5 -n miage-bank`
-   - Patientez quelques secondes et refaites `kubectl get pods -n miage-bank`. Vous verrez qu'ArgoCD va automatiquement "tuer" les pods en trop pour revenir à 1, prouvant que le GitOps fonctionne !
+   - Forcez une modification manuelle locale : `kubectl scale deployment miage-bank --replicas=5 -n miage-bank`
+   - Patientez quelques secondes et refaites `kubectl get pods -n miage-bank` (ou regardez l'interface web d'ArgoCD). Vous verrez qu'ArgoCD va automatiquement "tuer" les pods en trop pour revenir à 1, prouvant que la réconciliation GitOps fonctionne à merveille !
 
 ---
 
-## 3. Nettoyer votre environnement
-Une fois les tests validés, vous pouvez tout désinstaller proprement pour laisser votre cluster propre :
-```powershell
+## 3. Nettoyer l'environnement
+Une fois les tests validés, vous pouvez tout désinstaller proprement pour laisser le cluster vierge :
+```bash
 helm uninstall miage-bank-release -n miage-bank
 kubectl delete namespace miage-bank
 ```
