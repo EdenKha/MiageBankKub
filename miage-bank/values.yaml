@@ -2,10 +2,22 @@
 
 replicaCount: 1
 
-image:
-  repository: ghcr.io/edenkha/miage-bank
-  pullPolicy: Always
-  tag: "latest"
+services:
+  clientService:
+    image:
+      repository: ghcr.io/edenkha/miage-bank
+      pullPolicy: Always
+      tag: "latest"
+    service:
+      port: 8081
+
+  configServer:
+    image:
+      repository: ghcr.io/edenkha/miage-bank-configserver
+      pullPolicy: Always
+      tag: "latest"
+    service:
+      port: 10003
 
 imagePullSecrets: []
 nameOverride: ""
