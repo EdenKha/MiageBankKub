@@ -62,22 +62,22 @@ services:
     port: 10031
 
 
-  vault:
-    server: "http://vault.default.svc.cluster.local:8200"
-    kvPath: "secret"
-    version: "v2"
-    secretPath: "miage-bank/db"
-    tokenSecretName: "vault-token"
+vault:
+  server: "http://vault.default.svc.cluster.local:8200"
+  kvPath: "secret"
+  version: "v2"
+  secretPath: "miage-bank/db"
+  tokenSecretName: "vault-token"
 
-  db:
-    secretName: "miage-bank-db-secret"
+db:
+  secretName: "miage-bank-db-secret"
 
-  podSecurityContext:
-    fsGroup: 2000
-  securityContext:
-    capabilities:
-      drop:
-      - ALL
-    readOnlyRootFilesystem: true
-    runAsNonRoot: true
-    runAsUser: 1000
+podSecurityContext:
+  fsGroup: 2000
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
