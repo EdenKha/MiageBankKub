@@ -1,4 +1,4 @@
-# Hugues Ansoborlo - TP KUB DevOps MIAGE-Bank
+# Tom Verbecque / Hugues Ansoborlo - TP KUB DevOps MIAGE-Bank
 
 ## Partie A - Analyse comparative Docker vs Buildah
 
