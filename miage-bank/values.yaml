@@ -39,7 +39,7 @@ services:
         value: "banquebd"
 
   # Compte Service
-  bnkclientservice:
+  bnkcompteservice:
     image:
       repository: ghcr.io/edenkha/miage-bank-compte
       tag: "latest"
@@ -60,3 +60,24 @@ services:
       tag: "latest"
       pullPolicy: Always
     port: 10031
+
+
+  vault:
+    server: "http://vault.default.svc.cluster.local:8200"
+    kvPath: "secret"
+    version: "v2"
+    secretPath: "miage-bank/db"
+    tokenSecretName: "vault-token"
+
+  db:
+    secretName: "miage-bank-db-secret"
+
+  podSecurityContext:
+    fsGroup: 2000
+  securityContext:
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
