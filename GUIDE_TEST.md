@@ -45,7 +45,33 @@ minikube addons enable ingress
    kubectl create namespace miage-bank
    ```
 2. **Pré-requis Vault / ESO** :
-   Le projet utilise *External Secrets Operator* couplé à *Hashicorp Vault*. Assurez-vous d'avoir déployé Vault et ESO sur votre cluster, et d'avoir injecté des identifiants factices dans le chemin `secret/data/miage-bank/db` de Vault.
+   Le projet utilise *External Secrets Operator* couplé à *Hashicorp Vault*. Si vous n'avez pas encore ces composants, voici comment les déployer rapidement en local :
+
+   **A. Installer Vault (en mode dev)**
+   ```bash
+   helm repo add hashicorp https://helm.releases.hashicorp.com
+   helm repo update
+   helm install vault hashicorp/vault --set "server.dev.enabled=true" --set "server.dev.devRootToken=root" -n default
+   ```
+
+   **B. Installer External Secrets Operator (ESO)**
+   ```bash
+   helm repo add external-secrets https://charts.external-secrets.io
+   helm repo update
+   helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --set installCRDs=true
+   ```
+
+   **C. Injecter des identifiants factices dans Vault**
+   *(Patientez quelques secondes que le pod `vault-0` soit prêt)*
+   ```bash
+   kubectl exec -it vault-0 -n default -- vault kv put secret/miage-bank/db username="dummy-user" password="dummy-password"
+   ```
+
+   **D. Créer le secret contenant le token Vault pour ESO**
+   Notre chart s'attend à trouver le token de Vault dans un secret Kubernetes nommé `vault-token`.
+   ```bash
+   kubectl create secret generic vault-token --from-literal=token=root -n miage-bank
+   ```
 3. **Installer l'application via Helm** :
    ```bash
    helm install miage-bank-release ./miage-bank -n miage-bank
