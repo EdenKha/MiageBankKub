@@ -21,19 +21,12 @@ spec:
           ports:
             - containerPort: {{ .Values.services.compteService.service.port }}
           env:
-            - name: SPRING_DATA_MONGODB_HOST
-              value: "bnkmongo"
-            - name: SPRING_DATA_MONGODB_PORT
-              value: "27017"
-            - name: SPRING_DATA_MONGODB_DATABASE
-              value: "banquebd"
-            - name: SPRING_DATA_MONGODB_USERNAME
-              value: "root"
-            - name: SPRING_DATA_MONGODB_PASSWORD
-              value: "root"
-            - name: SPRING_DATA_MONGODB_URI
-              value: ""
             - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
               value: "true"
             - name: WAIT_HOSTS
               value: "bnkconfigsrv:{{ .Values.services.configServer.service.port }}, bnkmongo:{{ .Values.services.mongo.service.port }}"
+          args:
+            - "--spring.data.mongodb.username="
+            - "--spring.data.mongodb.password="
+            - "--spring.data.mongodb.host="
+            - "--spring.data.mongodb.port="
