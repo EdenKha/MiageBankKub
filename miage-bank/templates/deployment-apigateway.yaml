@@ -21,6 +21,10 @@ spec:
           ports:
             - containerPort: 10050
           env:
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:configserver:http://bnkconfigsrv:10003"
+            - name: SERVER_PORT
+              value: "10050"
             - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
               value: "true"
             - name: WAIT_HOSTS
