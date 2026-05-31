@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bnkcompositeservice
+  labels:
+    app: bnkcompositeservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bnkcompositeservice
+  template:
+    metadata:
+      labels:
+        app: bnkcompositeservice
+    spec:
+      containers:
+        - name: compositeservice
+          image: "{{ .Values.services.compositeService.image.repository }}:{{ .Values.services.compositeService.image.tag }}"
+          imagePullPolicy: {{ .Values.services.compositeService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.services.compositeService.service.port }}
+          env:
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: WAIT_HOSTS
+              value: 'bnkconfigsrv:{{ .Values.services.configServer.service.port }}, bnkmongo:{{ .Values.services.mongo.service.port }}, bnkcompteservice:{{ .Values.services.compteService.service.port }}, {{ include "miage-bank.fullname" . }}:{{ .Values.service.port }}'

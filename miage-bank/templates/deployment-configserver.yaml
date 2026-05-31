@@ -24,6 +24,9 @@ spec:
           # On va chercher l'image spécifique au config server :
           image: "{{ .Values.services.configServer.image.repository }}:{{ .Values.services.configServer.image.tag }}"
           imagePullPolicy: {{ .Values.services.configServer.image.pullPolicy }}
+          env:
+            - name: WAIT_HOSTS
+              value: "bnkannuaire:{{ .Values.services.annuaire.service.port }}"
           ports:
             - name: http
               containerPort: {{ .Values.services.configServer.service.port }}

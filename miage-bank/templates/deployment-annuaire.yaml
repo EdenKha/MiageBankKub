@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bnkannuaire
+  labels:
+    app: bnkannuaire
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bnkannuaire
+  template:
+    metadata:
+      labels:
+        app: bnkannuaire
+    spec:
+      containers:
+        - name: annuaire
+          image: "{{ .Values.services.annuaire.image.repository }}:{{ .Values.services.annuaire.image.tag }}"
+          imagePullPolicy: {{ .Values.services.annuaire.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.services.annuaire.service.port }}

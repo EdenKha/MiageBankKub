@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bnkannuaire
+  labels:
+    app: bnkannuaire
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.services.annuaire.service.port }}
+      targetPort: {{ .Values.services.annuaire.service.port }}
+      protocol: TCP
+      name: http
+  selector:
+    app: bnkannuaire

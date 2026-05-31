@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bnkapigateway
+  labels:
+    app: bnkapigateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bnkapigateway
+  template:
+    metadata:
+      labels:
+        app: bnkapigateway
+    spec:
+      containers:
+        - name: apigateway
+          image: "{{ .Values.services.apiGateway.image.repository }}:{{ .Values.services.apiGateway.image.tag }}"
+          imagePullPolicy: {{ .Values.services.apiGateway.image.pullPolicy }}
+          ports:
+            - containerPort: 10050
+          env:
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: WAIT_HOSTS
+              value: 'bnkconfigsrv:{{ .Values.services.configServer.service.port }}, bnkmongo:{{ .Values.services.mongo.service.port }}, bnkcompteservice:{{ .Values.services.compteService.service.port }}, {{ include "miage-bank.fullname" . }}:{{ .Values.service.port }}, bnkcompositeservice:{{ .Values.services.compositeService.service.port }}'

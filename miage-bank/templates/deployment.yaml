@@ -34,6 +34,10 @@ spec:
           image: "{{ .Values.services.clientService.image.repository }}:{{ .Values.services.clientService.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.services.clientService.image.pullPolicy }}
           env:
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: WAIT_HOSTS
+              value: "bnkconfigsrv:{{ .Values.services.configServer.service.port }}, bnkmysql:{{ .Values.services.mysql.service.port }}"
             - name: MYSQL_HOST
               value: {{ .Values.db.host }}
             - name: MYSQL_PORT
@@ -58,16 +62,22 @@ spec:
             httpGet:
               path: /actuator/health/liveness
               port: http
-            initialDelaySeconds: 30
+            initialDelaySeconds: 120
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: http
-            initialDelaySeconds: 15
+            initialDelaySeconds: 45
             periodSeconds: 10
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

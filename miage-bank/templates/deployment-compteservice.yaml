@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bnkcompteservice
+  labels:
+    app: bnkcompteservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bnkcompteservice
+  template:
+    metadata:
+      labels:
+        app: bnkcompteservice
+    spec:
+      containers:
+        - name: compteservice
+          image: "{{ .Values.services.compteService.image.repository }}:{{ .Values.services.compteService.image.tag }}"
+          imagePullPolicy: {{ .Values.services.compteService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.services.compteService.service.port }}
+          env:
+            - name: SPRING_DATA_MONGODB_HOST
+              value: "bnkmongo"
+            - name: SPRING_DATA_MONGODB_PORT
+              value: "27017"
+            - name: SPRING_DATA_MONGODB_DATABASE
+              value: "banquebd"
+            - name: SPRING_DATA_MONGODB_USERNAME
+              value: "root"
+            - name: SPRING_DATA_MONGODB_PASSWORD
+              value: "root"
+            - name: SPRING_DATA_MONGODB_URI
+              value: ""
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: WAIT_HOSTS
+              value: "bnkconfigsrv:{{ .Values.services.configServer.service.port }}, bnkmongo:{{ .Values.services.mongo.service.port }}"

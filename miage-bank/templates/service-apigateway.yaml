@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bnkapigateway
+  labels:
+    app: bnkapigateway
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.services.apiGateway.service.port }}
+      targetPort: 10050
+      protocol: TCP
+      name: http
+  selector:
+    app: bnkapigateway
