@@ -61,6 +61,9 @@ services:
       pullPolicy: Always
     port: 10031
 
+serviceAccount:
+  create: true
+  name: "miage-bank-sa"
 
 vault:
   server: "http://vault.default.svc.cluster.local:8200"
