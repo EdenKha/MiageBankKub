@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bnkmysql
+  labels:
+    app: bnkmysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bnkmysql
+  template:
+    metadata:
+      labels:
+        app: bnkmysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:oracle
+          ports:
+            - containerPort: 3306
+          env:
+            # On reprend les variables exactes du docker-compose
+            - name: MYSQL_DATABASE
+              value: "banquebd"
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.secretName }}
+                  key: password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bnkmysql # Le nom réseau ultra important !
+  labels:
+    app: bnkmysql
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3306
+      targetPort: 3306
+      protocol: TCP
+  selector:
+    app: bnkmysql

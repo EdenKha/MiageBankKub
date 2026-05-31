@@ -1,20 +1,35 @@
-FROM adoptopenjdk:11-jre-hotspot as builder
+# Multi-stage build pour optimiser la taille et la sécurité
+FROM eclipse-temurin:11-jre-alpine AS builder
+WORKDIR /app
 ARG JAR_FILE=target/*.jar
 COPY ${JAR_FILE} application.jar
 RUN java -Djarmode=layertools -jar application.jar extract
 
-FROM adoptopenjdk:11-jre-hotspot
-COPY --from=builder dependencies/ ./
-COPY --from=builder snapshot-dependencies/ ./
-COPY --from=builder spring-boot-loader/ ./
-COPY --from=builder application/ ./
+FROM eclipse-temurin:11-jre-alpine
 
-# ajout script de démarrage
-COPY startup.sh /
+# Création d'un utilisateur non-root pour réduire la surface d'attaque (bonnes pratiques de sécurité)
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+WORKDIR /app
+
+# Copie des layers extraits depuis l'étape builder
+COPY --from=builder /app/dependencies/ ./
+COPY --from=builder /app/snapshot-dependencies/ ./
+COPY --from=builder /app/spring-boot-loader/ ./
+COPY --from=builder /app/application/ ./
+
+# Ajout du script de démarrage
+COPY startup.sh /startup.sh
 RUN chmod +x /startup.sh
 
-# ajout script attente active
-ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.9.0/wait /wait
-RUN chmod +x /wait
+# Utilisation de wget au lieu de ADD pour respecter Hadolint (DL3020)
+RUN wget -q -O /wait https://github.com/ufoscout/docker-compose-wait/releases/download/2.9.0/wait && \
+    chmod +x /wait
+
+# Modification des permissions pour que l'utilisateur non-root y ait accès
+RUN chown -R appuser:appgroup /app /startup.sh /wait
+
+# Changement vers l'utilisateur non privilégié
+USER appuser
 
 ENTRYPOINT ["/bin/sh","-c","/startup.sh"]

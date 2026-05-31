@@ -1,97 +1,62 @@
-# Default values for miage-bank.
-
 replicaCount: 1
 
 services:
-  clientService:
+  # Annuaire
+  bnkannuaire:
     image:
-      repository: ghcr.io/edenkha/miage-bank
-      pullPolicy: Always
+      repository: ghcr.io/edenkha/miage-bank-annuaire
       tag: "latest"
-    service:
-      port: 8081
+      pullPolicy: Always
+    port: 10001
 
-  configServer:
+  # Config Server
+  bnkconfigsrv:
     image:
       repository: ghcr.io/edenkha/miage-bank-configserver
-      pullPolicy: Always
       tag: "latest"
-    service:
-      port: 10003
+      pullPolicy: Always
+    port: 10003
 
-imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
+  # API Gateway
+  bnkapigateway:
+    image:
+      repository: ghcr.io/edenkha/miage-bank-gateway
+      tag: "latest"
+      pullPolicy: Always
+    port: 10000
 
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: "miage-bank-sa"
+  # Client Service
+  bnkclientservice:
+    image:
+      repository: ghcr.io/edenkha/miage-bank-client
+      tag: "latest"
+      pullPolicy: Always
+    port: 10011
+    env:
+      - name: MYSQL_HOST
+        value: "bnkmysql.default.svc.cluster.local"
+      - name: MYSQL_DATABASE
+        value: "banquebd"
 
-podAnnotations: {}
+  # Compte Service
+  bnkclientservice:
+    image:
+      repository: ghcr.io/edenkha/miage-bank-compte
+      tag: "latest"
+      pullPolicy: Always
+    port: 10021
+    env:
+      - name: SPRING_DATA_MONGODB_HOST
+        value: "bnkmongo.default.svc.cluster.local"
+      - name: SPRING_DATA_MONGODB_PORT
+        value: "27017"
+      - name: SPRING_DATA_MONGODB_DATABASE
+        value: "banquebd"
 
-podSecurityContext:
-  fsGroup: 2000
-
-securityContext:
-  capabilities:
-    drop:
-    - ALL
-  readOnlyRootFilesystem: true
-  runAsNonRoot: true
-  runAsUser: 1000
-
-service:
-  type: ClusterIP
-  port: 10011
-
-ingress:
-  enabled: true
-  className: "traefik"
-  annotations: {}
-  hosts:
-    - host: miage-bank.local
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
-
-resources:
-  limits:
-    cpu: 500m
-    memory: 512Mi
-  requests:
-    cpu: 100m
-    memory: 256Mi
-
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 3
-  targetCPUUtilizationPercentage: 80
-
-nodeSelector: {}
-tolerations: []
-affinity: {}
-
-# Configuration de la base de données
-db:
-  host: "bnkmysql.default.svc.cluster.local"
-  port: 3306
-  name: "banquebd"
-  # Le nom du secret K8s créé séparément (externe au chart)
-  secretName: "miage-bank-db-secret"
-
-# Configuration Hashicorp Vault (pour External Secrets Operator)
-vault:
-  server: "http://vault.default.svc.cluster.local:8200"
-  kvPath: "secret"
-  version: "v2"
-  secretPath: "miage-bank/db"
-  # Nom du secret Kubernetes qui contient le token d'accès à Vault
-  tokenSecretName: "vault-token"
+  # Client Compte (Composite)
+  bnkclientcompte:
+    image:
+      repository: ghcr.io/edenkha/miage-bank-composite
+      tag: "latest"
+      pullPolicy: Always
+    port: 10031

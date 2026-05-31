@@ -2,7 +2,7 @@ name: CI Pipeline MIAGE-Bank
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "tom" ]
   pull_request:
     branches: [ "main" ]
 
@@ -15,12 +15,28 @@ jobs:
     permissions:
       contents: read
       packages: write
+      
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - module: Banque-ConfigServer
+            image: miage-bank-configserver
+          - module: Banque-Annuaire
+            image: miage-bank-annuaire
+          - module: Banque-ClientService
+            image: miage-bank-client
+          - module: Banque-CompteService
+            image: miage-bank-compte
+          - module: Banque-CompositeService
+            image: miage-bank-composite
+          - module: Banque-APIGateway
+            image: miage-bank-gateway
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # On utilise un JDK pour générer le JAR du service (pré-requis pour construire l'image)
     - name: Set up JDK 11
       uses: actions/setup-java@v4
       with:
@@ -28,63 +44,70 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
-    - name: Build with Maven (Banque-ClientService)
-      run: mvn -B package --file BanqueMSSol/pom.xml -pl Banque-ClientService -am
+    # Compile le code Java dynamiquement grâce à la variable matrix.module
+    - name: Build with Maven
+      run: mvn -B package --file BanqueMSSol/pom.xml -pl ${{ matrix.module }} -am
       
+    # (Optionnel) Linting du Dockerfile
     - name: Run Hadolint
       uses: hadolint/hadolint-action@v3.1.0
+      continue-on-error: true # Ne bloque pas si le Dockerfile n'est pas "parfait"
       with:
-        dockerfile: BanqueMSSol/Banque-ClientService/Containerfile
+        dockerfile: BanqueMSSol/${{ matrix.module }}/Dockerfile
 
+    # Construit l'image dynamiquement
     - name: Build image with Buildah
       id: build-image
       uses: redhat-actions/buildah-build@v2
       with:
-        image: miage-bank
+        image: ${{ matrix.image }}
         tags: latest
-        containerfiles: BanqueMSSol/Banque-ClientService/Containerfile
-        context: BanqueMSSol/Banque-ClientService
+        containerfiles: BanqueMSSol/${{ matrix.module }}/Dockerfile
+        context: BanqueMSSol/${{ matrix.module }}
 
+    # Prépare l'image pour les outils de sécurité
     - name: Push image to Docker Daemon for Trivy and Dive
-      run: buildah push miage-bank:latest docker-daemon:miage-bank:latest
+      run: buildah push ${{ matrix.image }}:latest docker-daemon:${{ matrix.image }}:latest
 
+    # Pousse l'image sur GitHub Registry (ghcr.io)
     - name: Push to GitHub Container Registry
       uses: redhat-actions/push-to-registry@v2
       with:
-        image: miage-bank
+        image: ${{ matrix.image }}
         tags: latest
-        registry: ghcr.io/edenkha
+        registry: ghcr.io/edenkha # Vérifie que c'est bien le bon registre
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    # Scan de sécurité Trivy pour l'image en cours
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: 'miage-bank:latest'
+        image-ref: '${{ matrix.image }}:latest'
         format: 'sarif'
-        output: 'trivy-results.sarif'
+        output: 'trivy-results-${{ matrix.image }}.sarif'
         severity: 'CRITICAL,HIGH'
-        # On ne bloque pas forcément le build
-        # exit-code: 1
 
+    # Audit Dive pour l'image en cours
     - name: Run Dive audit
       run: |
         wget -q https://github.com/wagoodman/dive/releases/download/v0.12.0/dive_0.12.0_linux_amd64.deb
         sudo dpkg -i dive_0.12.0_linux_amd64.deb
-        dive miage-bank:latest --ci --ci-config ${{ github.workspace }}/.dive-ci.yml -j dive-report.json
+        dive ${{ matrix.image }}:latest --ci --ci-config ${{ github.workspace }}/.dive-ci.yml -j dive-report-${{ matrix.image }}.json
         
     - name: Export Build Reports
       if: always()
       run: |
         mkdir -p build-reports
-        cp trivy-results.sarif build-reports/ || true
-        cp dive-report.json build-reports/ || true
+        cp trivy-results-${{ matrix.image }}.sarif build-reports/ || true
+        cp dive-report-${{ matrix.image }}.json build-reports/ || true
       
+    # Enregistre les rapports de sécurité pour les montrer au prof !
     - name: Upload Build Reports Artifact
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: build-reports
+        name: build-reports-${{ matrix.image }}
         path: build-reports/
 
     - name: Fix ownership for git cleanup

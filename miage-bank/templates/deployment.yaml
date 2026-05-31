@@ -1,82 +1,46 @@
+{{- range $name, $config := .Values.services }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "miage-bank.fullname" . }}
+  name: {{ include "miage-bank.fullname" $ }}-{{ $name }}
   labels:
-    {{- include "miage-bank.labels" . | nindent 4 }}
+    app: {{ $name }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
+  replicas: {{ $.Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "miage-bank.selectorLabels" . | nindent 6 }}
+      app: {{ $name }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
-      annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       labels:
-        {{- include "miage-bank.selectorLabels" . | nindent 8 }}
+        app: {{ $name }}
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      serviceAccountName: {{ include "miage-bank.serviceAccountName" . }}
+      serviceAccountName: {{ include "miage-bank.serviceAccountName" $ }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: {{ $name }}
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.services.clientService.image.repository }}:{{ .Values.services.clientService.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.services.clientService.image.pullPolicy }}
-          env:
-            - name: MYSQL_HOST
-              value: {{ .Values.db.host }}
-            - name: MYSQL_PORT
-              value: {{ .Values.db.port | quote }}
-            - name: MYSQL_DATABASE
-              value: {{ .Values.db.name }}
-            - name: MYSQL_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.db.secretName }}
-                  key: username
-            - name: MYSQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.db.secretName }}
-                  key: password
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          image: "{{ $config.image.repository }}:{{ $config.image.tag }}"
+          imagePullPolicy: {{ $config.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ $config.port }}
               protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /actuator/health/liveness
-              port: http
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /actuator/health/readiness
-              port: http
-            initialDelaySeconds: 15
-            periodSeconds: 10
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+          
+          # Si le service a des variables d'environnement définies, on les injecte :
+          {{- if $config.env }}
+          env:
+            {{- toYaml $config.env | nindent 12 }}
+          {{- end }}
+          
+          # Le fameux volume temporaire obligatoire pour Spring Boot
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
+{{- end }}

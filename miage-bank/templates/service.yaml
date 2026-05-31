@@ -1,15 +1,19 @@
+{{- range $name, $config := .Values.services }}
+---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "miage-bank.fullname" . }}
+  # Le nom du service sera la clé du yaml (ex: bnkconfigsrv ou client-service)
+  name: {{ $name }}
   labels:
-    {{- include "miage-bank.labels" . | nindent 4 }}
+    app: {{ $name }}
 spec:
-  type: {{ .Values.service.type }}
+  type: ClusterIP
   ports:
-    - port: {{ .Values.service.port }}
+    - port: {{ $config.port }}
       targetPort: http
       protocol: TCP
       name: http
   selector:
-    {{- include "miage-bank.selectorLabels" . | nindent 4 }}
+    app: {{ $name }}
+{{- end }}
