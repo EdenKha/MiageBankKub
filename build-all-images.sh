@@ -6,8 +6,8 @@ echo "Building all Miage-Bank microservices..."
 # On s'assure d'être à la racine du projet
 cd "$(dirname "$0")/BanqueMSSol"
 
-echo "=== Compilation via Maven ==="
-mvn clean package -DskipTests
+echo "=== Compilation via Maven (dans Docker) ==="
+docker run --rm -v "$(pwd):/usr/src/app" -w /usr/src/app maven:3.8.4-openjdk-11-slim mvn clean package -DskipTests
 
 echo "=== Build Docker : banque-annuaire ==="
 docker build -t banque-annuaire:7.0 ./Banque-Annuaire

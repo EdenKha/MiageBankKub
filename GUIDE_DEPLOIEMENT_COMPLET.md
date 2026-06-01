@@ -4,11 +4,13 @@ Ce guide vous explique de A à Z comment déployer l'intégralité des microserv
 
 ---
 
-## 1. Pré-requis
+## 1. Pré-requis (Approche DevOps)
+
+Afin de respecter les standards DevOps, la compilation de l'application a été conteneurisée. **Vous n'avez pas besoin d'installer Java ou Maven sur votre machine locale**.
 
 - **Minikube** (ou Docker Desktop K8s) installé et démarré.
 - Outils **kubectl**, **helm**, et **git** installés.
-- (Optionnel) Si les images ne sont pas sur un registre public, configurez votre terminal sur Minikube et buildez-les :
+- (Optionnel) Si les images ne sont pas sur un registre public, configurez votre terminal sur Minikube et buildez-les (la compilation se fera automatiquement via un conteneur Docker) :
 
   ```bash
   eval $(minikube docker-env)
