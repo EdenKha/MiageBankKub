@@ -1,185 +1,310 @@
-# Documentation de Déploiement : MIAGE-Bank
+# 📘 Guide de Déploiement Complet : MIAGE-Bank (Kubernetes & GitOps)
 
-## 1. Pré-requis
+Ce guide détaille pas à pas l'installation, la compilation, la sécurisation et le déploiement de l'application **MIAGE-Bank** sur un cluster Kubernetes local (Minikube). 
 
-- **Environnement Kubernetes** : Minikube ou Docker Desktop.
-- **Ingress Controller** : Traefik (nécessaire pour la classe d'ingress `traefik`).
-- **Outils CLI** : `kubectl`, `helm`, `git`, `docker`.
-- **Note d'architecture (DevOps)** : La compilation est conteneurisée. Aucune installation locale de Java ou Maven n'est requise.
+> [!IMPORTANT]
+> Ce projet utilise une architecture **DevOps moderne (GitOps et conteneurisation)** :
+> 1. **Aucune installation locale** de Java, Maven ou Node n'est requise. Toute la compilation s'effectue dans des conteneurs éphémères.
+> 2. **Déploiement GitOps** via ArgoCD : toute modification de la configuration Kubernetes doit être poussée sur GitHub pour être synchronisée automatiquement.
 
-## 2. Compilation et construction des images Docker
-
-Les images doivent être rendues disponibles dans l'environnement Kubernetes avant le déploiement.
-
-- **Minikube** (ou Docker Desktop K8s) installé et démarré.
-- Outils **kubectl**, **helm**, et **git** installés.
-- (Optionnel) Si les images ne sont pas sur un registre public, configurez votre terminal sur Minikube et buildez-les (la compilation se fera automatiquement via un conteneur Docker) :
-
-   ```bash
-   eval $(minikube docker-env)
-   ```
-
-2. Exécuter le script de build (la compilation Java s'effectue via un conteneur éphémère) :
-
-   ```bash
-   ./build-all-images.sh
-   ```
-
-**Attention** : Ce projet utilise la classe Ingress `traefik`. Assurez-vous d'avoir Traefik installé sur votre cluster (installé par défaut sur k3d, mais nécessite l'activation de l'addon ingress approprié ou une installation Helm sur Minikube)
 ---
 
-## 2. Pousser les derniers correctifs sur GitHub
+## 🗺️ 1. Architecture du Système
 
-⚠️ **ÉTAPE CRUCIALE POUR ARGOCD** ⚠️
-Nous venons d'apporter plusieurs correctifs vitaux aux fichiers locaux du Chart Helm (correction du port de l'API Gateway, correction de l'URL MongoDB du CompteService, et enregistrement IP sur Eureka).
-Puisque **ArgoCD va lire la configuration directement depuis GitHub**, vous devez absolument commiter et pousser ces changements sur votre dépôt distant avant de continuer :
+Voici comment les différents composants de la stack MIAGE-Bank interagissent au sein du cluster Kubernetes :
+
+```mermaid
+graph TD
+    User([Utilisateur / Testeur]) -->|localhost:10000| Gateway[bnkapigateway (API Gateway)]
+    
+    subgraph Cluster Kubernetes (Minikube)
+        subgraph Core Stack (miage-bank namespace)
+            Gateway -->|Routage| Composite[bnkcompositeservice]
+            Composite -->|Synthèse| Client[bnkclientservice]
+            Composite -->|Synthèse| Compte[bnkcompteservice]
+            
+            Client -->|MongoDB| Mongo[(MongoDB)]
+            Compte -->|MongoDB| MongoCompte[(MongoDB Compte)]
+            
+            %% Enregistrement Eureka
+            Client -.->|Enregistrement| Annuaire[bnkannuaire (Eureka)]
+            Compte -.->|Enregistrement| Annuaire
+            Composite -.->|Enregistrement| Annuaire
+            Gateway -.->|Enregistrement| Annuaire
+            
+            %% Config Server
+            Client -->|Configuration| ConfigSrv[bnkconfigsrv]
+            Compte -->|Configuration| ConfigSrv
+            Composite -->|Configuration| ConfigSrv
+            Gateway -->|Configuration| ConfigSrv
+        end
+
+        subgraph Security & Secrets (default namespace)
+            Vault[Hashicorp Vault] -->|Secrets DB| ESO[External Secrets Operator]
+            ESO -->|Génère le K8s Secret| DBSecret[Secret: vault-token / db]
+            DBSecret -.->|Injecté dans| Client
+            DBSecret -.->|Injecté dans| Compte
+        end
+        
+        subgraph GitOps CD (argocd namespace)
+            Argo[ArgoCD Controller] -.->|Surveille & Synchronise| K8sResources[Chart Helm miage-bank]
+        end
+    end
+    
+    GitHub[(Dépôt GitHub Distant)] -.->|Lit la configuration| Argo
+```
+
+---
+
+## 🛠️ 2. Pré-requis de l'Environnement
+
+Avant de commencer, assurez-vous d'avoir les outils suivants installés sur votre machine hôte :
+
+| Outil | Rôle | Commande de vérification |
+| :--- | :--- | :--- |
+| **Docker Desktop** | Moteur de conteneurs sous-jacent | `docker --version` |
+| **Minikube** | Cluster Kubernetes local de test | `minikube version` |
+| **kubectl** | CLI pour interagir avec Kubernetes | `kubectl version --client` |
+| **Helm v3** | Gestionnaire de paquets Kubernetes | `helm version` |
+| **Git** | Gestionnaire de version (requis pour GitOps) | `git version` |
+
+> [!NOTE]
+> Pour exécuter ce projet confortablement, nous recommandons d'allouer au moins **4 Go de RAM** et **2 CPUs** à Minikube.
+
+---
+
+## 🚀 3. Guide pas à pas d'installation et déploiement
+
+### Étape 1 : Démarrage du Cluster local (Minikube)
+
+Démarrez votre cluster local à l'aide de la commande suivante :
 
 ```bash
-git add miage-bank/templates/
-git commit -m "Fix: Configuration MongoDB, API Gateway targetPort et Eureka IP registration"
+minikube start --driver=docker --memory=4096 --cpus=2
+```
+* **Temps d'attente estimé** : 1 à 2 minutes.
+* **Que se passe-t-il ?** Minikube crée une machine virtuelle / conteneur système contenant le plan de contrôle Kubernetes et y connecte votre client Docker local.
+
+---
+
+### Étape 2 : Compilation & Construction des images Docker
+
+> [!CAUTION]
+> ⚠️ **PIÈGE TECHNIQUE (Windows / Minikube)** :
+> Minikube fonctionne dans un conteneur isolé. Si vous tentez de lancer la compilation Maven directement dans le démon Docker de Minikube, celle-ci échouera car le démon interne de Minikube ne peut pas monter de répertoires de votre système Windows hôte (`C:\Users\...`).
+> 
+> **La solution consiste à procéder en deux phases bien distinctes :**
+
+#### Phase A : Compiler le code Java sur le Docker Hôte (Docker Desktop)
+Assurez-vous que votre terminal n'est **PAS** branché sur Minikube (fermez et réouvrez un terminal propre), puis lancez la compilation. Le conteneur Maven éphémère va générer les fichiers `.jar` directement sur votre disque physique hôte.
+
+* **Windows (PowerShell)** :
+  ```powershell
+  docker run --rm -v "c:/Users/Hugues/Documents/MiageBankKub/BanqueMSSol:/usr/src/app" -w /usr/src/app maven:3.8.4-openjdk-11-slim mvn clean package -DskipTests
+  ```
+* **Bash (Linux / macOS / Git Bash)** :
+  ```bash
+  docker run --rm -v "$(pwd)/BanqueMSSol:/usr/src/app" -w /usr/src/app maven:3.8.4-openjdk-11-slim mvn clean package -DskipTests
+  ```
+* **Temps d'attente estimé** : 1 à 2 minutes (le temps de compiler les 7 modules).
+
+#### Phase B : Pointer le terminal sur Minikube et Builder les images Docker
+Une fois les `.jar` créés localement sur votre disque, connectez votre session de terminal au démon Docker interne de Minikube, puis lancez le build des images. Les images Docker compilées seront immédiatement stockées dans le registre de Minikube.
+
+* **Windows (PowerShell)** :
+  ```powershell
+  # 1. Connecter le terminal au Docker de Minikube :
+  minikube docker-env | Invoke-Expression
+
+  # 2. Builder les images (depuis la racine du projet) :
+  cd BanqueMSSol
+  docker build -t banque-annuaire:7.0 ./Banque-Annuaire
+  docker build -t banque-configsrv:7.0 ./Banque-ConfigServer
+  docker build -t banque-clientservice:7.0 ./Banque-ClientService
+  docker build -t banque-compteservice:7.0 ./Banque-CompteService
+  docker build -t banque-compositeservice:7.0 ./Banque-CompositeService
+  docker build -t banque-apigateway:7.0 ./Banque-APIGateway
+  cd ..
+  ```
+* **Windows (CMD - Invite de commande)** :
+  ```cmd
+  @FOR /f "tokens=*" %i IN ('minikube -p minikube docker-env') DO @%i
+  cd BanqueMSSol
+  docker build -t banque-annuaire:7.0 ./Banque-Annuaire
+  :: (répétez pour chaque service...)
+  ```
+* **Bash (Linux / macOS / Git Bash)** :
+  ```bash
+  eval $(minikube docker-env)
+  ./build-all-images.sh
+  ```
+
+---
+
+### Étape 3 : Pousser les correctifs locaux sur GitHub
+
+> [!WARNING]
+> ⚠️ **ÉTAPE CRUCIALE POUR ARGOCD (GITOPS)**
+> ArgoCD n'utilise pas vos fichiers locaux pour déployer sur Kubernetes ; il lit en temps réel la configuration stockée sur votre **dépôt GitHub distant**. 
+> Si vous apportez des modifications au dossier `miage-bank/` (port de la passerelle, adresses Eureka, MongoDB), vous devez absolument pousser ces correctifs en ligne :
+
+```bash
+git add miage-bank/
+git commit -m "Fix: correctifs de configuration réseau, ports et intégration Eureka/MongoDB"
 git push origin main
 ```
 
 ---
 
-## 3. Configuration de Vault (Gestion des Secrets)
+### Étape 4 : Déploiement de Vault & External Secrets (Gestion des secrets)
 
-L'application utilise Hashicorp Vault et External Secrets Operator (ESO) pour sécuriser les identifiants de bases de données.
+L'application utilise Hashicorp Vault pour sécuriser les identifiants des bases de données et External Secrets Operator (ESO) pour les injecter sous forme de secrets Kubernetes natifs.
 
-1. **Déploiement de Vault** :
+#### 1. Installer Vault en mode de développement :
+```bash
+helm repo add hashicorp https://helm.releases.hashicorp.com
+helm repo update
+helm install vault hashicorp/vault --set "server.dev.enabled=true" --set "server.dev.devRootToken=root" -n default
+```
 
-   ```bash
-   helm repo add hashicorp https://helm.releases.hashicorp.com
-   helm repo update
-   helm install vault hashicorp/vault --set "server.dev.enabled=true" --set "server.dev.devRootToken=root" -n default
-   ```
+#### 2. Installer External Secrets Operator (ESO) :
+```bash
+helm repo add external-secrets https://charts.external-secrets.io
+helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --set installCRDs=true
+```
+* **Temps d'attente estimé** : 30 secondes pour le démarrage complet des contrôleurs d'API Secrets.
 
-2. **Déploiement d'External Secrets Operator** :
-
-   ```bash
-   helm repo add external-secrets https://charts.external-secrets.io
-   helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --set installCRDs=true
-   ```
-
-3. **Initialisation des secrets** :
-   *(Attendre que le pod `vault-0` soit `Running`)*
-
-   ```bash
-   kubectl exec -it vault-0 -n default -- vault kv put secret/miage-bank/db username="dummy-user" password="dummy-password"
-   ```
-
-## 4. Déploiement Applicatif (GitOps avec ArgoCD)
-
-Le déploiement des microservices est automatisé via ArgoCD. Assurez-vous que le code source est poussé sur le dépôt distant ciblé par `argocd-app.yaml`.
-
-1. **Installation d'ArgoCD** :
-
-   ```bash
-   kubectl create namespace argocd
-   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-   ```
-
-2. **Préparation du Namespace métier** :
-
-   ```bash
-   kubectl create namespace miage-bank
-   kubectl create secret generic vault-token --from-literal=token=root -n miage-bank
-   ```
-
-3. **Application de la configuration ArgoCD** :
-
-   ```bash
-   kubectl apply -f argocd-app.yaml
-   ```
-
-## 5. Accès et Tests des Services
-
-1. **Accéder à l'interface Web ArgoCD (Optionnel mais recommandé)** :
-Pour visualiser l'arbre de vos déploiements en temps réel :
-
-- **Lancer le port-forward** :
-
-   ```bash
-  kubectl port-forward svc/argocd-server -n argocd 8080:443
-  ```
-
-- **Récupérer le mot de passe admin** :
-
-  ```bash
-  kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
-  ```
-
-- Allez sur [https://localhost:8080](https://localhost:8080) (acceptez l'avertissement de sécurité). Connectez-vous avec l'identifiant `admin` et le mot de passe récupéré ci-dessus.
-
-**Surveillez le démarrage des pods :**
+#### 3. Initialiser les secrets dans le coffre-fort Vault :
+> [!IMPORTANT]
+> Attendez que le pod `vault-0` soit au statut `Running` (`kubectl get pods -l app.kubernetes.io/name=vault`) avant de lancer la commande suivante.
 
 ```bash
-kubectl get pods -n miage-bank -w
-   ```
-
-*(Le démarrage complet prend environ 1 à 2 minutes. Les bases de données, ConfigServer et Annuaire démarrent en premier, suivis des autres microservices).*
+kubectl exec -it vault-0 -n default -- vault kv put secret/miage-bank/db username="dummy-user" password="dummy-password"
+```
 
 ---
 
-## 5. Tests des APIs (Postman ou PowerShell)
+### Étape 5 : Déploiement de l'Application via ArgoCD (GitOps)
 
-Une fois que **tous les pods sont au statut `Running`**, vous pouvez tester votre cluster métier !
+#### 1. Installer ArgoCD avec Server-Side Apply :
+> [!WARNING]
+> Les définitions de ressources d'ArgoCD (CRDs) sont volumineuses. Une commande `kubectl apply` standard échouera sous Windows en raison d'une limite de taille d'annotation (`Too long: may not be more than 262144 bytes`). Utilisez **obligatoirement** l'option `--server-side`.
 
-1. **Ouvrir l'accès à l'API Gateway** :
-L'API Gateway centralise les appels vers tous les autres microservices.
+```bash
+kubectl create namespace argocd
+kubectl apply --server-side -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
 
+#### 2. Configurer le Namespace de destination et le token Vault :
+ArgoCD va déployer l'application dans le namespace `miage-bank`. Nous devons pré-configurer le token d'accès Vault (`root`) pour permettre à External Secrets de déchiffrer les secrets.
+
+```bash
+kubectl create namespace miage-bank
+kubectl create secret generic vault-token --from-literal=token=root -n miage-bank
+```
+
+#### 3. Déployer l'application ArgoCD :
+> [!NOTE]
+> Avant d'appliquer cette ressource, ouvrez le fichier [argocd-app.yaml](file:///c:/Users/Hugues/Documents/MiageBankKub/argocd-app.yaml) et assurez-vous que la propriété `spec.source.repoURL` (ligne 9) cible bien **votre dépôt GitHub personnel**.
+
+```bash
+kubectl apply -f argocd-app.yaml
+```
+
+---
+
+## 🔍 4. Accès, Supervision & Tests des Services
+
+### 📊 Option A : Visualiser la synchronisation sur le Dashboard ArgoCD
+
+1. **Lancer le tunnel d'accès (Port-forward)** :
    ```bash
-   kubectl port-forward svc/bnkapigateway 10000:10000 -n miage-bank
+   kubectl port-forward svc/argocd-server -n argocd 8080:443
    ```
+   *(Laissez ce terminal ouvert)*
 
-*(En cas d'erreur "address already in use", relancez la commande avec un autre port local, par exemple `10002:10000`)*.
-
-1. **Tester avec Postman (ou cURL/PowerShell)** sur `http://localhost:10000` :
-
-**A. ClientService (`/api/clients`)**
-
-- **Créer un client (POST)**
-  *URL* : `http://localhost:10000/api/clients`
-  *Body (JSON)* : `{"id": 1, "nom": "Dupont", "prenom": "Jean"}`
-- **Lister les clients (GET)**
-  *URL* : `http://localhost:10000/api/clients`
-
-**B. CompteService (`/api/comptes`)**
-
-- **Créer/Consulter un compte**
-  *URL* : `http://localhost:10000/api/comptes`
-  *(Utilisez les payloads JSON correspondants à votre entité Compte)*
-
-**C. CompositeService (`/api/clientscomptes`)**
-
-- **Récupérer la synthèse Client + Comptes (GET)**
-  *URL* : `http://localhost:10000/api/clientscomptes/1` *(où 1 est l'id du client)*
+2. **Récupérer le mot de passe Administrateur d'ArgoCD** :
+   * **Windows (PowerShell)** :
+     ```powershell
+     [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String((kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}")))
+     ```
+   * **Linux / macOS / Git Bash** :
+     ```bash
+     kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+     ```
+3. Connectez-vous sur [https://localhost:8080](https://localhost:8080) (acceptez l'avertissement de certificat auto-signé) avec l'identifiant `admin` et le mot de passe décodé. Vous verrez l'application `miage-bank` s'auto-synchroniser en temps réel !
 
 ---
 
-## 6. Visualiser le Tableau de Bord Eureka (Bonus)
+### 🌐 Option B : Surveiller les Pods Métiers & Eureka
 
-Si vous souhaitez voir comment les microservices s'enregistrent dynamiquement :
-Ouvrez un *autre* terminal et lancez :
+Suivez le démarrage de vos pods applicatifs :
+```bash
+kubectl get pods -n miage-bank -w
+```
+*(Le démarrage complet prend environ 1 à 2 minutes. ConfigServer, MongoDB et Annuaire démarrent d'abord, puis les microservices se connectent).*
 
+#### Visualiser l'Annuaire Spring Eureka :
+Une fois le pod `bnkannuaire` actif, ouvrez un nouveau terminal et lancez :
 ```bash
 kubectl port-forward svc/bnkannuaire 10001:10001 -n miage-bank
 ```
-
-Allez sur **<http://localhost:10001>** dans votre navigateur pour voir le registre Spring Eureka en temps réel !
+Rendez-vous sur **<http://localhost:10001>** pour voir tous vos microservices (`CLIENTSERVICE`, `COMPTESERVICE`, etc.) enregistrés dynamiquement.
 
 ---
 
-## 7. Nettoyage Complet de l'Environnement
+### 🧪 Option C : Tester les APIs avec l'API Gateway
 
-Pour détruire proprement toute la stack de test et libérer les ressources de votre ordinateur :
-
-1. **Arrêter les accès (Port-forwards)** :
-Dans chaque terminal où tourne une commande `kubectl port-forward`, appuyez sur `Ctrl + C`.
-
-2. **Supprimer l'application sur ArgoCD** :
-
+Pour exposer votre point d'entrée unique (l'API Gateway) :
 ```bash
-kubectl delete application miage-bank -n argocd
-minikube stop
+kubectl port-forward svc/bnkapigateway 10000:10000 -n miage-bank
 ```
+
+Vous pouvez maintenant tester les routes HTTP via Postman, cURL, ou PowerShell sur `http://localhost:10000` :
+
+1. **Créer un Client (POST)** :
+   * **URL** : `http://localhost:10000/api/clients`
+   * **Body JSON** : `{"id": 1, "nom": "Dupont", "prenom": "Jean"}`
+2. **Consulter la synthèse client + comptes (GET)** :
+   * **URL** : `http://localhost:10000/api/clientscomptes/1`
+
+---
+
+## 🛠️ 5. Résolution des Problèmes Courants (FAQ)
+
+### ❌ Problème 1 : Minikube refuse de démarrer / Erreur de droits sur `id_rsa.pub`
+* **Symptôme** : L'accès au répertoire `.minikube\machines\minikube` est refusé, bloquant un nouveau démarrage.
+* **Solution** : Sous Windows, certains processus ou machines virtuelles peuvent verrouiller ces clés. Ouvrez PowerShell en tant qu'administrateur et forcez la suppression du dossier corrompu via CMD (qui contourne les blocages de permissions de fichiers individuels) :
+  ```powershell
+  cmd.exe /c "rmdir /s /q C:\Users\Hugues\.minikube\machines\minikube"
+  minikube delete
+  minikube start --driver=docker
+  ```
+
+### ❌ Problème 2 : L'erreur `lstat /target: no such file or directory` lors du Docker build
+* **Symptôme** : Les Dockerfiles échouent à la ligne `COPY target/*.jar`.
+* **Solution** : Vous avez oublié l'Étape 2 (Phase A). Le code source n'a pas été compilé sur votre machine hôte Docker Desktop. Lancez la compilation Maven sur le Docker hôte, puis re-buildez sur Minikube.
+
+### ❌ Problème 3 : Le Port-Forward renvoie `address already in use`
+* **Symptôme** : Impossible de démarrer le tunnel vers l'API Gateway ou ArgoCD.
+* **Solution** : Un autre processus ou tunnel écoute déjà sur ce port (par exemple le port 10000 ou 8080). Identifiez-le ou utilisez un autre port externe lors de la commande :
+  ```bash
+  kubectl port-forward svc/bnkapigateway 10002:10000 -n miage-bank
+  ```
+  *(Vous accéderez alors à la Gateway via `http://localhost:10002`)*
+
+---
+
+## 🧹 6. Nettoyage complet
+
+Pour arrêter proprement votre cluster de test et libérer toutes les ressources système :
+
+1. Dans chaque terminal où un tunnel `kubectl port-forward` est actif, coupez-le avec la combinaison de touches `Ctrl + C`.
+2. Supprimez l'application ArgoCD :
+   ```bash
+   kubectl delete application miage-bank -n argocd
+   ```
+3. Arrêtez Minikube :
+   ```bash
+   minikube stop
+   ```
