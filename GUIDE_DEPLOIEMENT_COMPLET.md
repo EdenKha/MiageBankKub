@@ -265,6 +265,11 @@ Vous pouvez maintenant tester les routes HTTP via Postman, cURL, ou PowerShell s
    * **Body JSON** : `{"id": 1, "nom": "Dupont", "prenom": "Jean"}`
 2. **Consulter la synthèse client + comptes (GET)** :
    * **URL** : `http://localhost:10000/api/clientscomptes/1`
+3. **Lister tous les comptes (GET)** :
+   * **URL** : `http://localhost:10000/api/comptes/all`
+
+> [!NOTE]
+> La configuration du microservice `compteservice` inclut une surcharge (`SPRING_PROFILES_ACTIVE=default` et variables d'environnement spécifiques) pour contourner un conflit natif dans Spring Boot 2.6 lié à la configuration de MongoDB.
 
 ---
 
