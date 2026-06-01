@@ -38,7 +38,7 @@ spec:
               value: "default"
             - name: SERVER_PORT
               value: "10021"
-            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+            - name: EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE
               value: "http://bnkannuaire:10001/eureka/"
             # Use a single URI for MongoDB to avoid Spring Boot 2.6 validation crashes
             # By using the 'default' profile, we bypass the remote ConfigServer which
