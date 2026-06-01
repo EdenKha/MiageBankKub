@@ -40,6 +40,9 @@ Le scan Trivy remonte plusieurs vulnérabilités (notamment sur le framework Spr
 * **Avant (Sans Multi-stage)** : Si nous avions construit l'image en un seul stage, l'audit Dive aurait identifié de nombreux répertoires superflus et un espace gaspillé énorme. L'image aurait contenu le cache Maven (`/root/.m2`, plusieurs centaines de Mo), les codes sources (`/app/src`), et le JDK complet, générant des layers inutiles et gonflant l'image à plus de 600 Mo.
 * **Après (Avec Multi-stage)** : Grâce au Multi-stage implémenté dans notre `Containerfile`, la layer de base se résume au JRE Alpine (~190 Mo) et les dernières layers ne contiennent *que* les dépendances Java extraites et l'application compilée (~40 Mo). Dive confirme l'absence totale de répertoires superflus de build.
 
+### 7. Compatibilité d'Architecture (Note matérielle)
+*La pipeline CI/CD GitHub Actions compile l'image OCI finale pour une architecture `amd64` (processeurs Intel/AMD). Pour un déploiement optimal sur un poste de développement utilisant l'architecture `arm64` (comme les Mac Apple Silicon M1/M2/M3), il est recommandé de rebuilder l'image localement à l'aide du script fourni afin d'éviter l'utilisation d'une couche d'émulation (Rosetta).*
+
 ---
 
 ## Partie B - Déploiement Kubernetes & GitOps avec ArgoCD
