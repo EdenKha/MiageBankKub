@@ -1,21 +1,29 @@
-# Guide de Déploiement et Test Complet - MIAGE-Bank KUB
+# Documentation de Déploiement : MIAGE-Bank
 
-Ce guide vous explique de A à Z comment déployer l'intégralité des microservices MIAGE-Bank sur votre cluster Kubernetes local en utilisant l'approche GitOps avec ArgoCD, et comment tester les APIs.
+## 1. Pré-requis
 
----
+- **Environnement Kubernetes** : Minikube ou Docker Desktop.
+- **Ingress Controller** : Traefik (nécessaire pour la classe d'ingress `traefik`).
+- **Outils CLI** : `kubectl`, `helm`, `git`, `docker`.
+- **Note d'architecture (DevOps)** : La compilation est conteneurisée. Aucune installation locale de Java ou Maven n'est requise.
 
-## 1. Pré-requis (Approche DevOps)
+## 2. Compilation et construction des images Docker
 
-Afin de respecter les standards DevOps, la compilation de l'application a été conteneurisée. **Vous n'avez pas besoin d'installer Java ou Maven sur votre machine locale**.
+Les images doivent être rendues disponibles dans l'environnement Kubernetes avant le déploiement.
 
 - **Minikube** (ou Docker Desktop K8s) installé et démarré.
 - Outils **kubectl**, **helm**, et **git** installés.
 - (Optionnel) Si les images ne sont pas sur un registre public, configurez votre terminal sur Minikube et buildez-les (la compilation se fera automatiquement via un conteneur Docker) :
 
-  ```bash
-  eval $(minikube docker-env)
-  ./build-all-images.sh
-  ```
+   ```bash
+   eval $(minikube docker-env)
+   ```
+
+2. Exécuter le script de build (la compilation Java s'effectue via un conteneur éphémère) :
+
+   ```bash
+   ./build-all-images.sh
+   ```
 
 **Attention** : Ce projet utilise la classe Ingress `traefik`. Assurez-vous d'avoir Traefik installé sur votre cluster (installé par défaut sur k3d, mais nécessite l'activation de l'addon ingress approprié ou une installation Helm sur Minikube)
 ---
@@ -38,62 +46,60 @@ git push origin main
 
 L'application utilise Hashicorp Vault et External Secrets Operator (ESO) pour sécuriser les identifiants de bases de données.
 
-1. **Installer Vault en mode Dev** :
+1. **Déploiement de Vault** :
 
-```bash
-helm repo add hashicorp https://helm.releases.hashicorp.com
-helm repo update
-helm install vault hashicorp/vault --set "server.dev.enabled=true" --set "server.dev.devRootToken=root" -n default
-```
+   ```bash
+   helm repo add hashicorp https://helm.releases.hashicorp.com
+   helm repo update
+   helm install vault hashicorp/vault --set "server.dev.enabled=true" --set "server.dev.devRootToken=root" -n default
+   ```
 
-1. **Installer ESO** :
+2. **Déploiement d'External Secrets Operator** :
 
-```bash
-helm repo add external-secrets https://charts.external-secrets.io
-helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --set installCRDs=true
-```
+   ```bash
+   helm repo add external-secrets https://charts.external-secrets.io
+   helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --set installCRDs=true
+   ```
 
-1. **Injecter les secrets factices dans Vault** :
-*(Patientez que le pod `vault-0` soit prêt, environ 30s)*
+3. **Initialisation des secrets** :
+   *(Attendre que le pod `vault-0` soit `Running`)*
 
-```bash
-kubectl exec -it vault-0 -n default -- vault kv put secret/miage-bank/db username="dummy-user" password="dummy-password"
-```
+   ```bash
+   kubectl exec -it vault-0 -n default -- vault kv put secret/miage-bank/db username="dummy-user" password="dummy-password"
+   ```
 
----
+## 4. Déploiement Applicatif (GitOps avec ArgoCD)
 
-## 4. Déploiement GitOps avec ArgoCD
+Le déploiement des microservices est automatisé via ArgoCD. Assurez-vous que le code source est poussé sur le dépôt distant ciblé par `argocd-app.yaml`.
 
-Nous allons déployer l'application automatiquement depuis GitHub grâce à ArgoCD.
+1. **Installation d'ArgoCD** :
 
-1. **Installer ArgoCD sur le cluster** :
+   ```bash
+   kubectl create namespace argocd
+   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+   ```
 
-```bash
-kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-```
+2. **Préparation du Namespace métier** :
 
-1. **Préparer le terrain (Namespace et Jeton Vault)** :
+   ```bash
+   kubectl create namespace miage-bank
+   kubectl create secret generic vault-token --from-literal=token=root -n miage-bank
+   ```
 
-```bash
-kubectl create namespace miage-bank
-kubectl create secret generic vault-token --from-literal=token=root -n miage-bank
-```
+3. **Application de la configuration ArgoCD** :
 
-1. **Déployer l'application MIAGE-Bank via ArgoCD** :
+   ```bash
+   kubectl apply -f argocd-app.yaml
+   ```
 
-```bash
-kubectl apply -f argocd-app.yaml
-```
-
-*ArgoCD va automatiquement synchroniser le dossier `miage-bank` depuis GitHub et déployer toutes les ressources !*
+## 5. Accès et Tests des Services
 
 1. **Accéder à l'interface Web ArgoCD (Optionnel mais recommandé)** :
 Pour visualiser l'arbre de vos déploiements en temps réel :
 
 - **Lancer le port-forward** :
 
-  ```bash
+   ```bash
   kubectl port-forward svc/argocd-server -n argocd 8080:443
   ```
 
@@ -109,7 +115,7 @@ Pour visualiser l'arbre de vos déploiements en temps réel :
 
 ```bash
 kubectl get pods -n miage-bank -w
-```
+   ```
 
 *(Le démarrage complet prend environ 1 à 2 minutes. Les bases de données, ConfigServer et Annuaire démarrent en premier, suivis des autres microservices).*
 
@@ -122,9 +128,9 @@ Une fois que **tous les pods sont au statut `Running`**, vous pouvez tester votr
 1. **Ouvrir l'accès à l'API Gateway** :
 L'API Gateway centralise les appels vers tous les autres microservices.
 
-```bash
-kubectl port-forward svc/bnkapigateway 10000:10000 -n miage-bank
-```
+   ```bash
+   kubectl port-forward svc/bnkapigateway 10000:10000 -n miage-bank
+   ```
 
 *(En cas d'erreur "address already in use", relancez la commande avec un autre port local, par exemple `10002:10000`)*.
 
@@ -175,14 +181,5 @@ Dans chaque terminal où tourne une commande `kubectl port-forward`, appuyez sur
 
 ```bash
 kubectl delete application miage-bank -n argocd
-```
-
-*(ArgoCD s'assurera de nettoyer tous les microservices et pods qu'il a déployés).*
-
-1. **Mettre en pause Minikube** :
-
-```bash
 minikube stop
 ```
-
-*(Ceci suspendra la machine virtuelle Kubernetes sans perdre la configuration (ArgoCD, Vault) pour votre prochaine session !)*
