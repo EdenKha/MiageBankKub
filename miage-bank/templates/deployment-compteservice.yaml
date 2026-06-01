@@ -14,12 +14,25 @@ spec:
       labels:
         app: bnkcompteservice
     spec:
+      serviceAccountName: {{ include "miage-bank.serviceAccountName" . }}
       containers:
         - name: compteservice
           image: "{{ .Values.services.compteService.image.repository }}:{{ .Values.services.compteService.image.tag }}"
           imagePullPolicy: {{ .Values.services.compteService.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.services.compteService.service.port }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.services.compteService.service.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.services.compteService.service.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"

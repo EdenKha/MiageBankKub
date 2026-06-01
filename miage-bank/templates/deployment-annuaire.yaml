@@ -14,9 +14,22 @@ spec:
       labels:
         app: bnkannuaire
     spec:
+      serviceAccountName: {{ include "miage-bank.serviceAccountName" . }}
       containers:
         - name: annuaire
           image: "{{ .Values.services.annuaire.image.repository }}:{{ .Values.services.annuaire.image.tag }}"
           imagePullPolicy: {{ .Values.services.annuaire.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.services.annuaire.service.port }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.services.annuaire.service.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.services.annuaire.service.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

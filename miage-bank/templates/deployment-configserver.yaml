@@ -31,6 +31,18 @@ spec:
             - name: http
               containerPort: {{ .Values.services.configServer.service.port }}
               protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.services.configServer.service.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.services.configServer.service.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
           # (IMPORTANT) On ajoute le volume /tmp dont on avait parlé :
           volumeMounts:
             - name: tmp-volume

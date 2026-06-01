@@ -14,12 +14,25 @@ spec:
       labels:
         app: bnkmongo
     spec:
+      serviceAccountName: {{ include "miage-bank.serviceAccountName" . }}
       containers:
         - name: mongo
           image: "{{ .Values.services.mongo.image.repository }}:{{ .Values.services.mongo.image.tag }}"
           imagePullPolicy: {{ .Values.services.mongo.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.services.mongo.service.port }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.services.mongo.service.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.services.mongo.service.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
           env:
             - name: MONGO_INITDB_ROOT_USERNAME
               value: "root"

@@ -14,12 +14,25 @@ spec:
       labels:
         app: bnkapigateway
     spec:
+      serviceAccountName: {{ include "miage-bank.serviceAccountName" . }}
       containers:
         - name: apigateway
           image: "{{ .Values.services.apiGateway.image.repository }}:{{ .Values.services.apiGateway.image.tag }}"
           imagePullPolicy: {{ .Values.services.apiGateway.image.pullPolicy }}
           ports:
             - containerPort: 10050
+          livenessProbe:
+            tcpSocket:
+              port: 10050
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 10050
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
           env:
             - name: SPRING_CONFIG_IMPORT
               value: "optional:configserver:http://bnkconfigsrv:10003"
