@@ -204,8 +204,6 @@ kubectl create secret generic vault-token --from-literal=token=root -n miage-ban
 ```
 
 #### 3. Déployer l'application ArgoCD :
-> [!NOTE]
-> Avant d'appliquer cette ressource, ouvrez le fichier [argocd-app.yaml](file:///c:/Users/Hugues/Documents/MiageBankKub/argocd-app.yaml) et assurez-vous que la propriété `spec.source.repoURL` (ligne 9) cible bien **votre dépôt GitHub personnel**.
 
 ```bash
 kubectl apply -f argocd-app.yaml
