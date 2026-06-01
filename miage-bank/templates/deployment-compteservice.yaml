@@ -35,13 +35,13 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: "dev"
+              value: "default"
             - name: SERVER_PORT
               value: "10021"
             - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
               value: "http://bnkannuaire:10001/eureka/"
-            # Individual MongoDB properties (no URI) - avoids Spring Boot 2.6 conflict
-            # comptesservice-dev.yml on Bitbucket also uses host+username+password format
+            # We use individual Mongo properties and bypass the remote 'dev' profile
+            # because it mixes uri and username/password which crashes Spring Boot 2.6
             - name: SPRING_DATA_MONGODB_HOST
               value: "bnkmongo"
             - name: SPRING_DATA_MONGODB_PORT
@@ -56,5 +56,18 @@ spec:
               value: "admin"
             - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
               value: "true"
+            # Additional properties to replace the ones lost from the bypassed 'dev' profile
+            - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+              value: "env,health,info,metrics,loggers,mappings,prometheus"
+            - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+              value: "http://bnkzipkin:9411/api/v2/spans"
+            - name: MANAGEMENT_TRACING_SAMPLING_PROBABILITY
+              value: "1"
+            - name: EUREKA_INSTANCE_METADATA_MAP_PROMETHEUS_SCRAPE
+              value: "true"
+            - name: EUREKA_INSTANCE_METADATA_MAP_PROMETHEUS_PATH
+              value: "/actuator/prometheus"
+            - name: EUREKA_INSTANCE_METADATA_MAP_PROMETHEUS_PORT
+              value: "10021"
             - name: WAIT_HOSTS
               value: "bnkconfigsrv:{{ .Values.services.configServer.service.port }}, bnkmongo:{{ .Values.services.mongo.service.port }}"
