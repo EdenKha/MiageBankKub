@@ -40,10 +40,8 @@ spec:
               value: "10021"
             - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
               value: "http://bnkannuaire:10001/eureka/"
-            # Neutralize the uri from Bitbucket config (which conflicts with individual properties)
-            # by setting it to empty - then use individual host/port/auth properties below
-            - name: SPRING_DATA_MONGODB_URI
-              value: ""
+            # Individual MongoDB properties (no URI) - avoids Spring Boot 2.6 conflict
+            # comptesservice-dev.yml on Bitbucket also uses host+username+password format
             - name: SPRING_DATA_MONGODB_HOST
               value: "bnkmongo"
             - name: SPRING_DATA_MONGODB_PORT
@@ -56,8 +54,6 @@ spec:
               value: "root"
             - name: SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE
               value: "admin"
-            - name: SPRING_CLOUD_CONFIG_OVERRIDE_SYSTEM_PROPERTIES
-              value: "false"
             - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
               value: "true"
             - name: WAIT_HOSTS
