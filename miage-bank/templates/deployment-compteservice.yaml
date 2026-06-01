@@ -42,6 +42,11 @@ spec:
               value: "http://bnkannuaire:10001/eureka/"
             - name: SPRING_DATA_MONGODB_URI
               value: "mongodb://root:root@bnkmongo:27017/banquebd?authSource=admin"
+            # Force Spring Boot to NOT let ConfigServer override system/env vars
+            # Needed because comptesservice-dev.yml on Bitbucket sets mongodb.uri
+            # without auth, which conflicts with the env var when both are present
+            - name: SPRING_CLOUD_CONFIG_OVERRIDE_SYSTEM_PROPERTIES
+              value: "false"
             - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
               value: "true"
             - name: WAIT_HOSTS
