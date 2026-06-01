@@ -35,7 +35,7 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: "prod"
+              value: "dev"
             - name: SERVER_PORT
               value: "10021"
             - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
