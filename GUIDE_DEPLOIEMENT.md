@@ -215,9 +215,12 @@ helm install miage-bank-release ./miage-bank -n miage-bank --dry-run
 
 #### 5.1 Installer ArgoCD
 
+> [!WARNING]
+> Les définitions de ressources d'ArgoCD (CRDs) sont volumineuses. Une commande `kubectl apply` standard échouera sous Windows en raison d'une limite de taille d'annotation (`Too long: may not be more than 262144 bytes`). Utilisez **obligatoirement** l'option `--server-side`.
+
 ```bash
 kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl apply --server-side -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 ```
 
 Attendre que tous les pods ArgoCD soient opérationnels :
@@ -402,6 +405,27 @@ minikube delete
 ---
 
 ## Dépannage (Troubleshooting)
+
+### Minikube refuse de démarrer / Erreur de droits sur `id_rsa.pub` (Windows)
+
+**Symptôme** : L'accès au répertoire `.minikube\machines\minikube` est refusé, bloquant un nouveau démarrage.
+
+**Solution** : Sous Windows, certains processus ou machines virtuelles peuvent verrouiller ces clés. Ouvrez PowerShell en tant qu'administrateur et forcez la suppression du dossier corrompu via CMD (qui contourne les blocages de permissions de fichiers individuels) :
+```powershell
+cmd.exe /c "rmdir /s /q %USERPROFILE%\.minikube\machines\minikube"
+minikube delete
+minikube start --driver=docker
+```
+
+---
+
+### L'erreur `lstat /target: no such file or directory` lors du Docker build
+
+**Symptôme** : Les Dockerfiles échouent à la ligne `COPY target/*.jar`.
+
+**Solution** : Le code source n'a pas été compilé. Veillez à utiliser `./build-all-images.sh` (ou `./build-all-images.ps1` sous Windows) qui compile les JARs dans un conteneur Maven éphémère avant de lancer la construction des images Docker.
+
+---
 
 ### Le pod reste en `CrashLoopBackOff`
 

@@ -35,14 +35,30 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: "prod"
+              value: "default"
             - name: SERVER_PORT
               value: "10021"
-            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
-              value: "http://bnkannuaire:10001/eureka/"
+            - name: SPRING_APPLICATION_JSON
+              value: '{"eureka.client.service-url.defaultZone":"http://bnkannuaire:10001/eureka/"}'
+            # Use a single URI for MongoDB to avoid Spring Boot 2.6 validation crashes
+            # By using the 'default' profile, we bypass the remote ConfigServer which
+            # previously injected conflicting properties (uri + username).
             - name: SPRING_DATA_MONGODB_URI
               value: "mongodb://root:root@bnkmongo:27017/banquebd?authSource=admin"
             - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
               value: "true"
+            # Additional properties to replace the ones lost from the bypassed 'dev' profile
+            - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+              value: "env,health,info,metrics,loggers,mappings,prometheus"
+            - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+              value: "http://bnkzipkin:9411/api/v2/spans"
+            - name: MANAGEMENT_TRACING_SAMPLING_PROBABILITY
+              value: "1"
+            - name: EUREKA_INSTANCE_METADATA_MAP_PROMETHEUS_SCRAPE
+              value: "true"
+            - name: EUREKA_INSTANCE_METADATA_MAP_PROMETHEUS_PATH
+              value: "/actuator/prometheus"
+            - name: EUREKA_INSTANCE_METADATA_MAP_PROMETHEUS_PORT
+              value: "10021"
             - name: WAIT_HOSTS
               value: "bnkconfigsrv:{{ .Values.services.configServer.service.port }}, bnkmongo:{{ .Values.services.mongo.service.port }}"

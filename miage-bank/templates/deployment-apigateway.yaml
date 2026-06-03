@@ -41,4 +41,4 @@ spec:
             - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
               value: "true"
             - name: WAIT_HOSTS
-              value: 'bnkconfigsrv:{{ .Values.services.configServer.service.port }}, bnkmongo:{{ .Values.services.mongo.service.port }}, bnkcompteservice:{{ .Values.services.compteService.service.port }}, {{ include "miage-bank.fullname" . }}:{{ .Values.service.port }}, bnkcompositeservice:{{ .Values.services.compositeService.service.port }}'
+              value: 'bnkconfigsrv:{{ .Values.services.configServer.service.port }}, bnkmongo:{{ .Values.services.mongo.service.port }}, bnkcompteservice:{{ .Values.services.compteService.service.port }}, bnkclientservice:{{ .Values.service.port }}, bnkcompositeservice:{{ .Values.services.compositeService.service.port }}'

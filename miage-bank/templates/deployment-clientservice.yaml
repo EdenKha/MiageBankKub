@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bnkclientservice
+  labels:
+    app: bnkclientservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bnkclientservice
+  template:
+    metadata:
+      labels:
+        app: bnkclientservice
+    spec:
+      serviceAccountName: {{ include "miage-bank.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: clientservice
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.services.clientService.image.repository }}:{{ .Values.services.clientService.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.services.clientService.image.pullPolicy }}
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "dev"
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: WAIT_HOSTS
+              value: "bnkconfigsrv:{{ .Values.services.configServer.service.port }}, bnkmysql:{{ .Values.services.mysql.service.port }}"
+            - name: MYSQL_HOST
+              value: {{ .Values.db.host }}
+            - name: MYSQL_PORT
+              value: {{ .Values.db.port | quote }}
+            - name: MYSQL_DATABASE
+              value: {{ .Values.db.name }}
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.secretName }}
+                  key: username
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.secretName }}
+                  key: password
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: 120
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: 45
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
