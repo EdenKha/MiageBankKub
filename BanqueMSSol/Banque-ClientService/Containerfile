@@ -29,6 +29,9 @@ RUN wget -q -O /wait https://github.com/ufoscout/docker-compose-wait/releases/do
 # Modification des permissions pour que l'utilisateur non-root y ait accès
 RUN chown -R appuser:appgroup /app /startup.sh /wait
 
+# Exposer le port applicatif
+EXPOSE 8081
+
 # Changement vers l'utilisateur non privilégié
 USER appuser
 
