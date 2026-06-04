@@ -6,7 +6,6 @@
 
 ## 📋 Table des matières
 
-- [🚀 Démarrage rapide](#-démarrage-rapide)
 - [🏗️ Architecture de l'application](#️-architecture-de-lapplication)
 - [Partie A — Chaîne de build OCI (Buildah, Trivy, Dive)](#partie-a--chaîne-de-build-oci-buildah-trivy-dive)
   - [1. Analyse comparative Docker vs Buildah](#1-analyse-comparative-docker-vs-buildah)
@@ -18,27 +17,6 @@
   - [1. Structure du Chart Helm](#1-structure-du-chart-helm)
   - [2. Gestion des Secrets (Vault + ESO)](#2-gestion-des-secrets-vault--eso)
   - [3. GitOps ArgoCD & Démonstration de la Dérive](#3-gitops-argocd--démonstration-de-la-dérive)
-
----
-
-## 🚀 Démarrage rapide
-
-```bash
-# 1. Cloner le dépôt et construire les images Docker localement
-git clone https://github.com/EdenKha/MiageBankKub.git
-cd MiageBankKub
-./build-all-images.sh          # Linux/macOS/WSL
-# .\build-all-images.ps1       # Windows PowerShell
-
-# 2. Déployer sur Kubernetes (Minikube ou Docker Desktop)
-kubectl create namespace miage-bank
-kubectl create secret generic vault-token --from-literal=token=root -n miage-bank
-helm install miage-bank-release ./miage-bank -n miage-bank
-
-# 3. Accéder à l'API Gateway
-kubectl port-forward svc/bnkapigateway 10000:10000 -n miage-bank
-# → http://localhost:10000/api/clients
-```
 
 ---
 
