@@ -1,4 +1,4 @@
-# Tom Verbecque / Hugues Ansoborlo - TP KUB DevOps MIAGE-Bank
+# Hugues ANSOBORLO / Tom VERBECQUE - TP KUB DevOps MIAGE-Bank
 
 > 📘 **Guide de déploiement complet** : voir [GUIDE_DEPLOIEMENT.md](GUIDE_DEPLOIEMENT.md) pour les instructions pas-à-pas (pré-requis, installation, tests, troubleshooting).
 
