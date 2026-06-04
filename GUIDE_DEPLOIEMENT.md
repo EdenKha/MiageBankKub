@@ -89,6 +89,7 @@ kubectl get nodes
 ```
 
 > ⚠️ **Ingress Controller** : Ce projet utilise la classe Ingress `traefik`. Selon votre environnement :
+>
 > - **k3d** : Traefik est installé par défaut, rien à faire.
 > - **Minikube** : Traefik n'est pas inclus par défaut. Vous pouvez soit installer Traefik via Helm, soit activer l'addon Nginx (`minikube addons enable ingress`) et modifier `ingress.className` dans `values.yaml`.
 > - **Docker Desktop** : Activez Kubernetes dans les settings, puis installez Traefik via Helm.
@@ -119,6 +120,7 @@ Rien de spécial — les images buildées localement sont automatiquement dispon
 ```
 
 Ce script :
+
 1. Compile tous les JARs via un conteneur Maven éphémère (aucune installation locale requise)
 2. Construit les images Docker de chaque microservice (Annuaire, ConfigServer, ClientService, CompteService, CompositeService, APIGateway)
 
@@ -148,6 +150,7 @@ helm install vault hashicorp/vault \
 ```
 
 Attendre que le pod soit prêt :
+
 ```bash
 kubectl wait --for=condition=Ready pod/vault-0 -n default --timeout=120s
 ```
@@ -170,8 +173,6 @@ kubectl exec -it vault-0 -n default -- vault kv put secret/miage-bank/db \
   username="dummy-user" \
   password="dummy-password"
 ```
-
-> En production, remplacez `dummy-user` / `dummy-password` par de vrais identifiants.
 
 #### 3.4 Préparer le namespace et le token Vault
 
@@ -206,6 +207,7 @@ helm install miage-bank-release ./miage-bank -n miage-bank --dry-run
 ### Étape 5 — Déployer avec ArgoCD (GitOps)
 
 > ⚠️ **Étape cruciale** : ArgoCD lit la configuration directement depuis GitHub. Assurez-vous que vos dernières modifications locales sont poussées sur le dépôt distant **avant** de continuer :
+>
 > ```bash
 > git add -A
 > git commit -m "Mise à jour du Chart Helm"
@@ -214,7 +216,6 @@ helm install miage-bank-release ./miage-bank -n miage-bank --dry-run
 
 #### 5.1 Installer ArgoCD
 
-> [!WARNING]
 > Les définitions de ressources d'ArgoCD (CRDs) sont volumineuses. Une commande `kubectl apply` standard échouera sous Windows en raison d'une limite de taille d'annotation (`Too long: may not be more than 262144 bytes`). Utilisez **obligatoirement** l'option `--server-side`.
 
 ```bash
@@ -223,6 +224,7 @@ kubectl apply --server-side -n argocd -f https://raw.githubusercontent.com/argop
 ```
 
 Attendre que tous les pods ArgoCD soient opérationnels :
+
 ```bash
 kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s
 ```
@@ -245,17 +247,20 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443
 Récupérer le mot de passe admin :
 
 **Linux / macOS / Git Bash :**
+
 ```bash
 kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath="{.data.password}" | base64 -d
 ```
 
 **PowerShell (Windows) :**
+
 ```powershell
 [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}")))
 ```
 
 Puis ouvrez [https://localhost:8080](https://localhost:8080) dans votre navigateur (acceptez l'avertissement de sécurité) et connectez-vous avec :
+
 - **Login** : `admin`
 - **Mot de passe** : celui récupéré ci-dessus
 
@@ -270,6 +275,7 @@ kubectl get pods -n miage-bank -w
 ```
 
 Le démarrage complet prend environ **1 à 2 minutes**. L'ordre de démarrage est :
+
 1. 🗄️ Bases de données (MySQL, MongoDB)
 2. ⚙️ ConfigServer
 3. 📋 Annuaire (Eureka)
@@ -285,6 +291,7 @@ kubectl port-forward svc/bnkapigateway 10000:10000 -n miage-bank
 ```
 
 > En cas d'erreur `address already in use`, utilisez un port local différent :
+>
 > ```bash
 > kubectl port-forward svc/bnkapigateway 10002:10000 -n miage-bank
 > ```
@@ -336,11 +343,13 @@ Ouvrez [http://localhost:10001](http://localhost:10001) dans votre navigateur.
 Ce test prouve que le GitOps fonctionne : toute modification manuelle du cluster est automatiquement corrigée par ArgoCD.
 
 1. **Vérifier l'état initial** — 1 seul pod doit être en cours d'exécution :
+
    ```bash
    kubectl get pods -n miage-bank
    ```
 
 2. **Provoquer une dérive** — augmenter artificiellement les réplicas :
+
    ```bash
    kubectl scale deployment miage-bank --replicas=5 -n miage-bank
    ```
@@ -348,6 +357,7 @@ Ce test prouve que le GitOps fonctionne : toute modification manuelle du cluster
 3. **Observer la détection** — dans l'interface ArgoCD, l'application passe en statut **OutOfSync** (dérive détectée).
 
 4. **Observer la réconciliation automatique** — grâce à `selfHeal: true`, ArgoCD supprime automatiquement les 4 pods en trop et restaure le nombre défini dans Git (1 réplica). Le statut repasse en **Synced**.
+
    ```bash
    # Vérifier après quelques secondes
    kubectl get pods -n miage-bank
@@ -398,4 +408,3 @@ minikube stop
 # Ou suppression complète du cluster Minikube
 minikube delete
 ```
-

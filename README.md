@@ -222,7 +222,8 @@ buildah rmi miage-bank-builder
 
 Le scan Trivy a été exécuté sur l'image `banque-clientservice:7.0`. Les rapports complets sont disponibles dans [`build-reports/`](build-reports/) :
 
-- [`trivy-results.sarif`](build-reports/trivy-results.sarif) — Format SARIF (GitHub Security)
+- [`trivy-results.json`](build-reports/trivy-results.json) — Format JSON (rapport complet machine-readable)
+- [`trivy-results.sarif`](build-reports/trivy-results.sarif) — Format SARIF (intégration GitHub Security)
 
 #### 3.1 Tableau des CVE HIGH et CRITICAL identifiées
 

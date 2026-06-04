@@ -38,15 +38,15 @@
     {
       "index": 5,
       "id": "blobs",
-      "digestId": "sha256:9615c71ac91251feb8deea63cc9120a2a3cf165798b75b38fcf0415074a6ca94",
-      "sizeBytes": 64499634,
+      "digestId": "sha256:3889197dcd9c305d0cdeebc7599c1e3341385490f7b52aa40b9b2f492f300479",
+      "sizeBytes": 64499821,
       "command": "#(nop) ENTRYPOINT [\"/bin/sh\",\"-c\",\"/startup.sh\"]"
     }
   ],
   "image": {
-    "sizeBytes": 236045966,
+    "sizeBytes": 236046153,
     "inefficientBytes": 639304,
-    "efficiencyScore": 0.9982934891588022,
+    "efficiencyScore": 0.9982934905107308,
     "fileReference": [
       {
         "count": 2,
