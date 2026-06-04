@@ -276,8 +276,6 @@ Le démarrage complet prend environ **1 à 2 minutes**. L'ordre de démarrage es
 4. 🔧 Microservices métier (ClientService, CompteService, CompositeService)
 5. 🌐 API Gateway
 
-> **Si un pod reste en `CrashLoopBackOff`** : c'est souvent un problème de timing (la base de données n'est pas encore prête). Attendez quelques minutes, le mécanisme de restart devrait le résoudre automatiquement. Voir [Dépannage](#dépannage-troubleshooting).
-
 #### 6.2 Accéder à l'API Gateway
 
 L'API Gateway centralise les appels vers tous les microservices :
