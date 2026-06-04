@@ -1,13 +1,4 @@
-# Tom Verbecque / Hugues Ansoborlo — TP DevOps MIAGE-Bank
-
-[![CI Pipeline](https://github.com/EdenKha/MiageBankKub/actions/workflows/ci.yml/badge.svg)](https://github.com/EdenKha/MiageBankKub/actions)
-![Helm](https://img.shields.io/badge/Helm-v3-0F1689?logo=helm)
-![Kubernetes](https://img.shields.io/badge/Kubernetes-1.28-326CE5?logo=kubernetes)
-![Java](https://img.shields.io/badge/Java-11-ED8B00?logo=openjdk)
-![Buildah](https://img.shields.io/badge/Buildah-daemonless-red)
-![Trivy](https://img.shields.io/badge/Trivy-scanned-critical)
-![Dive](https://img.shields.io/badge/Dive-99.82%25_efficiency-brightgreen)
-![ArgoCD](https://img.shields.io/badge/ArgoCD-GitOps-orange?logo=argo)
+# Tom Verbecque / Hugues Ansoborlo - TP KUB DevOps MIAGE-Bank
 
 > 📘 **Guide de déploiement complet** : voir [GUIDE_DEPLOIEMENT.md](GUIDE_DEPLOIEMENT.md) pour les instructions pas-à-pas (pré-requis, installation, tests, troubleshooting).
 
@@ -116,6 +107,7 @@ Les images générées par Buildah sont **strictement conformes au standard OCI 
 #### 1.4 Cas d'usage CI/CD : Pertinence en environnement rootless
 
 Buildah s'intègre naturellement et de façon sécurisée dans des pipelines CI/CD :
+
 - Il peut s'exécuter **à l'intérieur d'un pod Kubernetes** ou d'un runner CI sans privilèges élevés.
 - Il ne nécessite **aucun montage de socket** à risques (`/var/run/docker.sock`).
 - Il est parfaitement adapté aux **runners GitLab partagés** ou aux environnements multi-tenant.
@@ -164,6 +156,7 @@ ENTRYPOINT ["/bin/sh","-c","/startup.sh"]
 ```
 
 **Commande de build :**
+
 ```bash
 buildah bud -f Containerfile -t banque-clientservice:7.0 .
 ```
@@ -228,6 +221,7 @@ buildah rmi miage-bank-builder
 ### 3. Scan de sécurité Trivy — Rapport CVE
 
 Le scan Trivy a été exécuté sur l'image `banque-clientservice:7.0`. Les rapports complets sont disponibles dans [`build-reports/`](build-reports/) :
+
 - [`trivy-results.sarif`](build-reports/trivy-results.sarif) — Format SARIF (GitHub Security)
 
 #### 3.1 Tableau des CVE HIGH et CRITICAL identifiées
@@ -397,10 +391,12 @@ miage-bank/
 #### 1.3 Sécurité : NetworkPolicy & RBAC
 
 **NetworkPolicy** (`networkpolicy.yaml`) — Principe de **default-deny** :
+
 - Tout trafic entrant vers le namespace `miage-bank` est bloqué par défaut.
 - Seul le trafic provenant du contrôleur Ingress Traefik est autorisé vers l'API Gateway.
 
 **RBAC** (`rbac.yaml`) — Principe de **least privilege** :
+
 - Un `ServiceAccount` dédié (`miage-bank-sa`) est créé pour les pods.
 - Un `Role` minimal (accès en lecture aux `ConfigMaps` et `Secrets` du namespace) est associé via un `RoleBinding`.
 
