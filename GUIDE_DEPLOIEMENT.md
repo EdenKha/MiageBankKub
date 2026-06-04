@@ -16,7 +16,6 @@
   - [Étape 6 — Vérifier et tester les services](#étape-6--vérifier-et-tester-les-services)
   - [Étape 7 — Démonstration de la dérive ArgoCD](#étape-7--démonstration-de-la-dérive-argocd)
   - [Étape 8 — Nettoyage complet](#étape-8--nettoyage-complet)
-- [Dépannage (Troubleshooting)](#dépannage-troubleshooting)
 
 ---
 
