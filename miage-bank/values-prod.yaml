@@ -11,7 +11,8 @@ services:
       pullPolicy: Always
       tag: "latest"
     service:
-      port: 8081
+      port: 10011
+
 
   configServer:
     image:
