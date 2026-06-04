@@ -48,16 +48,16 @@ spec:
                   key: password
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ .Values.services.clientService.service.port }}
               protocol: TCP
           livenessProbe:
             tcpSocket:
-              port: {{ .Values.service.port }}
+              port: {{ .Values.services.clientService.service.port }}
             initialDelaySeconds: 120
             periodSeconds: 10
           readinessProbe:
             tcpSocket:
-              port: {{ .Values.service.port }}
+              port: {{ .Values.services.clientService.service.port }}
             initialDelaySeconds: 45
             periodSeconds: 10
           resources:

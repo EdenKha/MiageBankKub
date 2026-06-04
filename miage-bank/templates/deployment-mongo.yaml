@@ -35,8 +35,14 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
             - name: MONGO_INITDB_ROOT_USERNAME
-              value: "root"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mongo.secretName }}
+                  key: username
             - name: MONGO_INITDB_ROOT_PASSWORD
-              value: "root"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mongo.secretName }}
+                  key: password
             - name: MONGO_INITDB_DATABASE
-              value: "banquebd"
+              value: {{ .Values.mongo.database | quote }}

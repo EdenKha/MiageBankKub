@@ -169,9 +169,17 @@ helm install external-secrets external-secrets/external-secrets \
 #### 3.3 Injecter les identifiants dans Vault
 
 ```bash
+# Injecter les credentials MySQL
 kubectl exec -it vault-0 -n default -- vault kv put secret/miage-bank/db \
   username="dummy-user" \
-  password="dummy-password"
+  password="dummy-password" \
+  rootPassword="root"
+
+# Injecter les credentials MongoDB
+kubectl exec -it vault-0 -n default -- vault kv put secret/miage-bank/mongo \
+  username="root" \
+  password="root" \
+  uri="mongodb://root:root@bnkmongo:27017/banquebd?authSource=admin"
 ```
 
 #### 3.4 Préparer le namespace et le token Vault

@@ -381,7 +381,8 @@ miage-bank/
     ├── serviceaccount.yaml             ← ServiceAccount dédié miage-bank-sa
     │
     ├── secretstore.yaml                ← Connexion ESO ↔ Vault
-    └── externalsecret.yaml             ← Synchronisation Vault → Secret K8s
+    ├── externalsecret.yaml             ← Synchronisation Vault → Secret K8s (MySQL)
+    └── externalsecret-mongo.yaml       ← Synchronisation Vault → Secret K8s (MongoDB)
 ```
 
 #### 1.2 Choix de conception
@@ -405,7 +406,7 @@ miage-bank/
 
 ### 2. Gestion des Secrets (Vault + ESO)
 
-Les credentials de base de données (MySQL username/password) ne figurent **jamais en clair** dans Git ni dans `values.yaml`. Le flux de gestion des secrets est le suivant :
+Les credentials de base de données (MySQL et MongoDB) ne figurent **jamais en clair** dans Git ni dans `values.yaml`. Le flux de gestion des secrets est le suivant :
 
 ```
 ┌──────────────┐     ┌──────────────────┐     ┌───────────────────┐     ┌─────────────┐
@@ -414,13 +415,21 @@ Les credentials de base de données (MySQL username/password) ne figurent **jama
 │              │     │                  │     │                   │     │             │
 │ secret/      │     │ vault.default    │     │ miage-bank-db-    │     │ MYSQL_USER  │
 │ miage-bank/db│     │ .svc:8200        │     │ secret            │     │ MYSQL_PASS  │
+│              │     │                  │     │                   │     │ ROOT_PASS   │
+│ secret/      │     │                  │     │ miage-bank-mongo- │     │ MONGO_USER  │
+│ miage-bank/  │     │                  │     │ secret            │     │ MONGO_PASS  │
+│ mongo        │     │                  │     │                   │     │ MONGO_URI   │
 └──────────────┘     └──────────────────┘     └───────────────────┘     └─────────────┘
 ```
 
-1. **Vault** stocke les identifiants de base de données à l'adresse `secret/miage-bank/db` (clés : `username`, `password`).
+1. **Vault** stocke les identifiants à deux adresses :
+   - `secret/miage-bank/db` — credentials MySQL (clés : `username`, `password`, `rootPassword`)
+   - `secret/miage-bank/mongo` — credentials MongoDB (clés : `username`, `password`, `uri`)
 2. **SecretStore** ([`secretstore.yaml`](miage-bank/templates/secretstore.yaml)) configure la connexion entre External Secrets Operator et Vault (via un token root en mode dev).
-3. **ExternalSecret** ([`externalsecret.yaml`](miage-bank/templates/externalsecret.yaml)) synchronise automatiquement les valeurs Vault vers un `Secret` Kubernetes nommé `miage-bank-db-secret`.
-4. Les **Deployments** injectent ces valeurs via `secretKeyRef` dans les variables d'environnement `MYSQL_USER` et `MYSQL_PASSWORD` des pods.
+3. **ExternalSecret** — Deux manifestes synchronisent automatiquement les valeurs Vault vers des `Secrets` Kubernetes :
+   - [`externalsecret.yaml`](miage-bank/templates/externalsecret.yaml) → `miage-bank-db-secret` (MySQL)
+   - [`externalsecret-mongo.yaml`](miage-bank/templates/externalsecret-mongo.yaml) → `miage-bank-mongo-secret` (MongoDB)
+4. Les **Deployments** injectent ces valeurs via `secretKeyRef` dans les variables d'environnement des pods.
 
 > 📖 Voir la section **Étape 3** du [Guide de Déploiement](GUIDE_DEPLOIEMENT.md#étape-3--configurer-vault-et-external-secrets-operator) pour les commandes d'installation de Vault et ESO.
 

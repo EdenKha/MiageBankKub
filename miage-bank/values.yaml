@@ -127,13 +127,21 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# Configuration de la base de données
+# Configuration de la base de données MySQL
 db:
   host: "bnkmysql"
   port: 3306
   name: "banquebd"
-  # Le nom du secret K8s créé séparément (externe au chart)
+  # Le nom du secret K8s créé par l'ExternalSecret (via Vault/ESO)
   secretName: "miage-bank-db-secret"
+
+# Configuration MongoDB
+mongo:
+  host: "bnkmongo"
+  port: 27017
+  database: "banquebd"
+  # Le nom du secret K8s créé par l'ExternalSecret (via Vault/ESO)
+  secretName: "miage-bank-mongo-secret"
 
 # Configuration Hashicorp Vault (pour External Secrets Operator)
 vault:
@@ -141,5 +149,7 @@ vault:
   kvPath: "secret"
   version: "v2"
   secretPath: "miage-bank/db"
+  # Chemin Vault pour les credentials MongoDB
+  mongoSecretPath: "miage-bank/mongo"
   # Nom du secret Kubernetes qui contient le token d'accès à Vault
   tokenSecretName: "vault-token"

@@ -1,21 +1,80 @@
-# Default values for miage-bank.
+# Production values for miage-bank.
+# Usage : helm install miage-bank-release ./miage-bank -f miage-bank/values-prod.yaml -n miage-bank
 
 replicaCount: 3
 
-image:
-  repository: ghcr.io/edenkha/miage-bank
-  pullPolicy: Always
-  tag: "latest"
+# Images de production depuis GitHub Container Registry
+services:
+  clientService:
+    image:
+      repository: ghcr.io/edenkha/banque-clientservice
+      pullPolicy: Always
+      tag: "latest"
+    service:
+      port: 8081
+
+  configServer:
+    image:
+      repository: ghcr.io/edenkha/banque-configsrv
+      pullPolicy: Always
+      tag: "latest"
+    service:
+      port: 10003
+
+  annuaire:
+    image:
+      repository: ghcr.io/edenkha/banque-annuaire
+      pullPolicy: Always
+      tag: "latest"
+    service:
+      port: 10001
+
+  compteService:
+    image:
+      repository: ghcr.io/edenkha/banque-compteservice
+      pullPolicy: Always
+      tag: "latest"
+    service:
+      port: 10021
+
+  compositeService:
+    image:
+      repository: ghcr.io/edenkha/banque-compositeservice
+      pullPolicy: Always
+      tag: "latest"
+    service:
+      port: 10031
+
+  apiGateway:
+    image:
+      repository: ghcr.io/edenkha/banque-apigateway
+      pullPolicy: Always
+      tag: "latest"
+    service:
+      port: 10000
+
+  mysql:
+    image:
+      repository: mysql
+      pullPolicy: IfNotPresent
+      tag: "oracle"
+    service:
+      port: 3306
+
+  mongo:
+    image:
+      repository: mongo
+      pullPolicy: IfNotPresent
+      tag: "latest"
+    service:
+      port: 27017
 
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
 serviceAccount:
-  # Specifies whether a service account should be created
   create: true
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
   name: "miage-bank-sa"
 
 podAnnotations: {}
@@ -67,13 +126,19 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# Configuration de la base de données
+# Configuration de la base de données MySQL
 db:
-  host: "bnkmysql.default.svc.cluster.local"
+  host: "bnkmysql"
   port: 3306
   name: "banquebd"
-  # Le nom du secret K8s créé séparément (externe au chart)
   secretName: "miage-bank-db-secret"
+
+# Configuration MongoDB
+mongo:
+  host: "bnkmongo"
+  port: 27017
+  database: "banquebd"
+  secretName: "miage-bank-mongo-secret"
 
 # Configuration Hashicorp Vault (pour External Secrets Operator)
 vault:
@@ -81,5 +146,5 @@ vault:
   kvPath: "secret"
   version: "v2"
   secretPath: "miage-bank/db"
-  # Nom du secret Kubernetes qui contient le token d'accès à Vault
+  mongoSecretPath: "miage-bank/mongo"
   tokenSecretName: "vault-token"

@@ -43,8 +43,12 @@ spec:
             # Use a single URI for MongoDB to avoid Spring Boot 2.6 validation crashes
             # By using the 'default' profile, we bypass the remote ConfigServer which
             # previously injected conflicting properties (uri + username).
+            # L'URI complète est stockée dans Vault pour ne pas exposer les credentials en clair.
             - name: SPRING_DATA_MONGODB_URI
-              value: "mongodb://root:root@bnkmongo:27017/banquebd?authSource=admin"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mongo.secretName }}
+                  key: uri
             - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
               value: "true"
             # Additional properties to replace the ones lost from the bypassed 'dev' profile

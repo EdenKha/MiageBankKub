@@ -47,4 +47,7 @@ spec:
                   name: {{ .Values.db.secretName }}
                   key: password
             - name: MYSQL_ROOT_PASSWORD
-              value: "root"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.secretName }}
+                  key: rootPassword
